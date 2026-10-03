@@ -1,0 +1,20 @@
+node_modules/
+dist/
+release/
+build/
+validation/
+test-results/
+playwright-report/
+.pnpm-store/
+.npm-cache/
+.builder-cache/
+.test-output/
+backups/
+*.log
+# Personal papers and local model files do not belong in the source repository.
+*.pdf
+*.gguf
+*.safetensors
+models/
+.env
+.env.*

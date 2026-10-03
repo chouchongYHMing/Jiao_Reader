@@ -1,0 +1,58 @@
+# Keep this ID stable so later installers upgrade the same application.
+appId: com.jiao.reader
+productName: Jiao_Reader
+electronVersion: 44.5.1
+asar: true
+npmRebuild: false
+directories:
+  output: release
+  buildResources: build-resources
+files:
+  - main.cjs
+  - preload.cjs
+  - ollama.cjs
+  - package.json
+  - app/**/*
+  - '!**/*.map'
+  - '!**/{test,tests,__tests__,validation,test-results}/**/*'
+extraFiles:
+  - from: LICENSE
+    to: LICENSE.jiao-reader.txt
+  - from: README.md
+    to: README.md
+  - from: README.en.md
+    to: README.en.md
+  - from: README.ca.md
+    to: README.ca.md
+  - from: README.es.md
+    to: README.es.md
+  - from: docs
+    to: docs
+    filter:
+      - '*.md'
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  executableName: Jiao_Reader
+  icon: build-resources/icon.ico
+  requestedExecutionLevel: asInvoker
+nsis:
+  artifactName: Jiao_Reader-Setup-${version}.${ext}
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Jiao_Reader
+  uninstallDisplayName: Jiao_Reader
+  packElevateHelper: false
+  runAfterFinish: true
+  differentialPackage: false
+  include: build-resources/installer.nsh
+  installerLanguages:
+    - zh_CN
+    - en_US
+publish: null
