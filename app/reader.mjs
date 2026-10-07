@@ -5,12 +5,14 @@ const $ = id => document.getElementById(id);
 const ui = Object.fromEntries([
   'openButton', 'emptyOpenButton', 'documentName', 'pageInput', 'pageTotal', 'previousPage', 'nextPage',
   'pageReadout', 'zoomOut', 'zoomIn', 'zoomValue', 'fitButton', 'readerScroll', 'emptyState', 'pdfStage',
-  'pages', 'toast', 'recentList', 'recentCount', 'modelStatus', 'refreshStatus', 'modelSelect', 'modelHint',
+  'pages', 'toast', 'recentList', 'recentCount', 'clearRecent', 'modelStatus', 'refreshStatus', 'modelSelect', 'modelHint',
   'startOllama', 'modelGuide', 'modelCommand', 'copyCommand', 'sourceText', 'selectionLength',
   'translationText', 'copyButton', 'retryTranslation', 'ollamaLink', 'historyList', 'historyCount', 'dropOverlay'
 ].map(id => [id, $(id)]));
 
 let fileName = '';
+let filePath = '';
+let recentBusy = false;
 let openSerial = 0;
 let translationSerial = 0;
 let statusSerial = 0;
@@ -88,6 +90,7 @@ function resetTranslation() {
 
 function renderRecent() {
   ui.recentCount.textContent = String(recent.length);
+  ui.clearRecent.disabled = recentBusy || !recent.length;
   ui.recentList.replaceChildren();
   if (!recent.length) {
     const hint = document.createElement('p');
@@ -96,8 +99,10 @@ function renderRecent() {
     ui.recentList.append(hint);
   }
   for (const item of recent) {
+    const row = document.createElement('div');
+    row.className = `recent-row${item.path === filePath ? ' active' : ''}`;
     const button = document.createElement('button');
-    button.className = `recent-item${item.name === fileName ? ' active' : ''}`;
+    button.className = 'recent-item';
     button.type = 'button';
     button.title = item.path;
     const icon = document.createElement('span');
@@ -110,11 +115,31 @@ function renderRecent() {
       try {
         const result = await window.jiao.openRecent(item.path);
         recent = result.recent;
-        await openPdf(result.name, result.data);
+        await openPdf(result.name, result.data, result.path);
       } catch (error) { showToast(`打开失败：${error.message}`); }
     });
-    ui.recentList.append(button);
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'recent-remove';
+    remove.textContent = '×';
+    remove.title = `移除 ${item.name} 的阅读记录，保留 PDF 文件`;
+    remove.setAttribute('aria-label', `移除阅读记录：${item.name}`);
+    remove.disabled = recentBusy;
+    remove.addEventListener('click', () => changeRecent('removeRecent', item.path));
+    row.append(button, remove);
+    ui.recentList.append(row);
   }
+}
+
+async function changeRecent(action, path) {
+  if (recentBusy) return;
+  recentBusy = true;
+  renderRecent();
+  try {
+    recent = await window.jiao[action](path);
+    showToast(action === 'clearRecent' ? '最近阅读已清空，PDF 文件已保留。' : '已移除阅读记录，PDF 文件已保留。');
+  } catch (error) { showToast(`移除记录失败：${error.message}`); }
+  finally { recentBusy = false; renderRecent(); }
 }
 
 async function choosePdf() {
@@ -122,7 +147,7 @@ async function choosePdf() {
     const result = await window.jiao.open();
     if (!result) return;
     recent = result.recent;
-    await openPdf(result.name, result.data);
+    await openPdf(result.name, result.data, result.path);
   } catch (error) { showToast(`打开失败：${error.message}`); }
 }
 
@@ -138,10 +163,11 @@ async function openDroppedPdf(file) {
   } catch (error) { showToast(`打开失败：${error.message}`); }
 }
 
-async function openPdf(name, bytes) {
+async function openPdf(name, bytes, path = '') {
   const serial = ++openSerial;
   resetTranslation();
   fileName = name;
+  filePath = path;
   ui.documentName.textContent = name;
   ui.documentName.title = name;
   ui.emptyState.hidden = true;
@@ -341,6 +367,7 @@ async function checkModel(action = 'status', name) {
 
 ui.openButton.addEventListener('click', choosePdf);
 ui.emptyOpenButton.addEventListener('click', choosePdf);
+ui.clearRecent.addEventListener('click', () => changeRecent('clearRecent'));
 ui.previousPage.addEventListener('click', () => { dismissBubble(); reader.goToPage(reader.currentPage - 1); });
 ui.nextPage.addEventListener('click', () => { dismissBubble(); reader.goToPage(reader.currentPage + 1); });
 function setReaderScale(scale) { dismissBubble(); reader.setScale(scale); }

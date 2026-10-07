@@ -6,13 +6,13 @@ Projecte: [chouchongYHMing/Jiao_Reader](https://github.com/chouchongYHMing/Jiao_
 
 Lector local d’articles acadèmics en PDF per a Windows 10 / 11 x64. Utilitza PDF.js per mostrar els documents i els models ja instal·lats a l’Ollama de l’ordinador per traduir el text seleccionat.
 
-És una eina de lectura personal; la versió actual és la `0.3.0`. La pantalla inicial inclou una il·lustració no oficial de Takamatsu Tomori llegint al seu escriptori. Quan obres un article i hi selecciones text, la traducció apareix en un globus al costat de la selecció. El panell dret conserva tant el text original com la traducció completa.
+És una eina de lectura personal; la versió actual és la `0.3.1`. La pantalla inicial inclou una il·lustració no oficial de Takamatsu Tomori llegint al seu escriptori. Quan obres un article i hi selecciones text, la traducció apareix en un globus al costat de la selecció. El panell dret conserva tant el text original com la traducció completa.
 
 **La interfície de l’aplicació és actualment en xinès simplificat i les traduccions del text seleccionat també són al xinès simplificat.** Aquesta versió en català correspon únicament a la documentació; no afegeix una interfície ni traduccions al català.
 
 ## Per a usuaris: instal·lar i començar a llegir
 
-1. Descarrega `Jiao_Reader-Setup-0.3.0.exe` de la pàgina [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) i executa’l per completar la instal·lació. Els fitxers etiquetats com a `Source code` contenen el codi font; per utilitzar l’aplicació, només cal descarregar el Setup.
+1. Descarrega `Jiao_Reader-Setup-0.3.1.exe` de la pàgina [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) i executa’l per completar la instal·lació. Els fitxers etiquetats com a `Source code` contenen el codi font; per utilitzar l’aplicació, només cal descarregar el Setup.
 2. Obre Jiao_Reader des de l’escriptori o el menú Inici i obre un PDF o arrossega’l a la finestra.
 3. Llegeix de manera contínua amb la roda del ratolí. La barra superior mostra la pàgina actual i el nombre total de pàgines. Pots introduir un número de pàgina per anar-hi directament o ajustar la visualització amb `+`, `−` i “适合宽度” (ajusta a l’amplada).
 
@@ -55,6 +55,9 @@ L’espai en disc, la memòria RAM i la memòria gràfica necessaris depenen del
 | Traduir | Selecciona un fragment de la capa de text del PDF i consulta la traducció al globus que apareix al costat |
 | Copiar la traducció | Prem el botó de còpia del globus o de la targeta de traducció del panell dret |
 | Canviar de model | Actualitza la llista i selecciona un model instal·lat a l’ordinador |
+| Gestionar lectures recents | Elimina una entrada amb el seu botó d’eliminació o prem “清空” (buida) per treure-les totes; es conserven els PDF originals |
+
+La selecció per arrossegament gestiona millor els espais entre línies, els marges de pàgina i el text en dues columnes, i redueix les ampliacions sobtades de la selecció o els salts al final de la pàgina. Quan es detecten clarament les columnes, cada selecció es manté a la columna on comença; inicia una selecció nova per traduir l’altra columna. Si el document té una disposició complexa, comprova que el text original del panell dret coincideixi amb el que volies seleccionar. Eliminar entrades de les lectures recents només modifica la llista: no esborra els PDF del disc ni tanca l’article que tens obert.
 
 Els PDF es llegeixen localment. El text seleccionat s’envia al servei local a `127.0.0.1:11434`. Actualment, cal que el PDF tingui una capa de text que es pugui extreure; els documents escanejats requereixen OCR previ. Cada PDF pot ocupar com a màxim 200 MB i cada traducció pot contenir fins a 3.000 caràcters. L’historial de traduccions només es conserva durant la sessió actual de l’aplicació.
 
@@ -76,7 +79,7 @@ Per generar un instal·lador que es pugui distribuir:
 npm run build:win
 ```
 
-Fitxer resultant: `release\Jiao_Reader-Setup-0.3.0.exe`. Només cal compartir aquest instal·lador amb els companys. No cal enviar-los `node_modules`, el codi font, la carpeta de compilació de l’aplicació ni els fitxers dels teus models d’Ollama.
+Fitxer resultant: `release\Jiao_Reader-Setup-0.3.1.exe`. Només cal compartir aquest instal·lador amb els companys. No cal enviar-los `node_modules`, el codi font, la carpeta de compilació de l’aplicació ni els fitxers dels teus models d’Ollama.
 
 Per generar només la carpeta de l’aplicació `dist\Jiao_Reader-win32-x64` i poder-la verificar:
 

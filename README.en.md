@@ -6,13 +6,13 @@ Project: [chouchongYHMing/Jiao_Reader](https://github.com/chouchongYHMing/Jiao_R
 
 A local PDF reader for academic papers on Windows 10 / 11 x64. It uses PDF.js to display papers and models already installed in your local Ollama instance to translate selected text.
 
-A personal reading tool, currently at version `0.3.0`. The empty screen features fan art of Takamatsu Tomori reading at her desk. Once you open a paper, select text to see its translation in a nearby popup; the right panel keeps the full source text and translation.
+A personal reading tool, currently at version `0.3.1`. The empty screen features fan art of Takamatsu Tomori reading at her desk. Once you open a paper, select text to see its translation in a nearby popup; the right panel keeps the full source text and translation.
 
 **The application interface is currently in Simplified Chinese, and selected text is translated into Simplified Chinese.** These README translations do not indicate that the application has a multilingual interface.
 
 ## For readers: install and start reading
 
-1. Download `Jiao_Reader-Setup-0.3.0.exe` from [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases), then run the installer. The `Source code` downloads contain the source code; to use the application, choose Setup.
+1. Download `Jiao_Reader-Setup-0.3.1.exe` from [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases), then run the installer. The `Source code` downloads contain the source code; to use the application, choose Setup.
 2. Open Jiao_Reader from the desktop or Start menu, then open or drag in a PDF.
 3. Use the mouse wheel to read continuously. The top toolbar shows the current page and total page count. Enter a page number to jump to it, or use `+`, `−`, and “适合宽度” (Fit width) to adjust the view.
 
@@ -55,6 +55,9 @@ Disk, RAM, and video memory requirements depend on the model you choose. The fir
 | Translate | Select a passage in the PDF text layer and read the translation in the popup near the selection |
 | Copy a translation | Use the copy button in the popup or the translation card on the right |
 | Change models | Refresh the model list and select a model installed locally |
+| Manage recent papers | Remove one entry with its delete button, or use “清空” (Clear) to remove all entries; the original PDFs are kept |
+
+Drag selection handles gaps between lines, page margins, and two-column text more reliably, reducing sudden expansion of the selection or jumps to the bottom of a page. For clearly detected columns, each drag stays in its starting column; start a new selection to translate the other column. For complex layouts, check that the source text in the right panel matches your intended selection. Removing recent entries only changes the list: it neither deletes PDFs from disk nor closes the paper currently open.
 
 PDF files are read locally. Selected text is sent to the local endpoint `127.0.0.1:11434`. PDFs must have an extractable text layer; scanned documents need OCR first. The maximum PDF size is 200 MB, and each translation is limited to 3,000 characters. Translation history is kept only for the current application session.
 
@@ -76,7 +79,7 @@ Build a distributable installer:
 npm run build:win
 ```
 
-Output: `release\Jiao_Reader-Setup-0.3.0.exe`. Share this single installer with other readers. You do not need to send `node_modules`, the source code, the application build folder, or your own Ollama model files.
+Output: `release\Jiao_Reader-Setup-0.3.1.exe`. Share this single installer with other readers. You do not need to send `node_modules`, the source code, the application build folder, or your own Ollama model files.
 
 Build only the application folder `dist\Jiao_Reader-win32-x64` for validation:
 

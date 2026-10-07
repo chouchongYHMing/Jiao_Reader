@@ -10,6 +10,7 @@ const MAX_PDF_BYTES = 200 * 1024 * 1024;
 const READER_URL = pathToFileURL(path.join(__dirname, 'app', 'index.html')).href;
 let mainWindow;
 let ollama;
+let recentWriteQueue = Promise.resolve();
 
 app.setAppUserModelId('com.jiao.reader');
 
@@ -17,7 +18,7 @@ function preferencesPath() {
   return path.join(app.getPath('userData'), 'recent.json');
 }
 
-async function getRecent() {
+async function readRecentEntries() {
   try {
     const entries = JSON.parse(await fs.readFile(preferencesPath(), 'utf8'));
     return Array.isArray(entries) ? entries.filter(entry => typeof entry === 'string').slice(0, 8) : [];
@@ -26,12 +27,29 @@ async function getRecent() {
   }
 }
 
-async function remember(filePath) {
-  const entries = await getRecent();
-  const next = [filePath, ...entries.filter(entry => entry !== filePath)].slice(0, 8);
-  await fs.mkdir(app.getPath('userData'), { recursive: true });
-  await fs.writeFile(preferencesPath(), JSON.stringify(next), 'utf8');
-  return next.map(entry => ({ path: entry, name: path.basename(entry) }));
+async function getRecent() {
+  await recentWriteQueue;
+  return readRecentEntries();
+}
+
+function recentList(entries) {
+  return entries.map(entry => ({ path: entry, name: path.basename(entry) }));
+}
+
+function updateRecent(changeEntries) {
+  const operation = recentWriteQueue.then(async () => {
+    const next = changeEntries(await readRecentEntries());
+    await fs.mkdir(app.getPath('userData'), { recursive: true });
+    await fs.writeFile(preferencesPath(), JSON.stringify(next), 'utf8');
+    return recentList(next);
+  });
+  // A failed write must not prevent later updates from being attempted.
+  recentWriteQueue = operation.catch(() => {});
+  return operation;
+}
+
+function remember(filePath) {
+  return updateRecent(entries => [filePath, ...entries.filter(entry => entry !== filePath)].slice(0, 8));
 }
 
 async function readPdf(filePath) {
@@ -40,7 +58,7 @@ async function readPdf(filePath) {
   if (!stat.isFile() || stat.size > MAX_PDF_BYTES) throw new Error('PDF 文件超过 200 MB，或无法读取。');
   const file = await fs.readFile(filePath);
   if (file.subarray(0, 5).toString('ascii') !== '%PDF-') throw new Error('文件不是有效的 PDF。');
-  return { name: path.basename(filePath), data: new Uint8Array(file) };
+  return { path: filePath, name: path.basename(filePath), data: new Uint8Array(file) };
 }
 
 function trusted(event) {
@@ -55,7 +73,20 @@ function trusted(event) {
 function registerIpc() {
   ipcMain.handle('reader:recent', async event => {
     if (!trusted(event)) throw new Error('无效请求');
-    return (await getRecent()).map(entry => ({ path: entry, name: path.basename(entry) }));
+    return recentList(await getRecent());
+  });
+
+  ipcMain.handle('reader:remove-recent', async (event, filePath) => {
+    if (!trusted(event)) throw new Error('无效请求');
+    if (typeof filePath !== 'string' || !filePath.trim() || filePath.length > 32768 || filePath.includes('\0')) {
+      throw new Error('无效文件路径。');
+    }
+    return updateRecent(entries => entries.filter(entry => entry !== filePath));
+  });
+
+  ipcMain.handle('reader:clear-recent', async event => {
+    if (!trusted(event)) throw new Error('无效请求');
+    return updateRecent(() => []);
   });
 
   ipcMain.handle('reader:open', async event => {

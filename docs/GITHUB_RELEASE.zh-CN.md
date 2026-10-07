@@ -26,7 +26,7 @@ git init -b main
 git status --short
 git add .
 git diff --cached --stat
-git commit -m "Release Jiao_Reader 0.3.0"
+git commit -m "Release Jiao_Reader 0.3.1"
 git remote add origin https://github.com/chouchongYHMing/Jiao_Reader.git
 git push -u origin main
 ```
@@ -48,18 +48,18 @@ npm run build:win
 
 | 文件 | 用途 |
 | --- | --- |
-| `release/Jiao_Reader-Setup-0.3.0.exe` | 同学直接下载并安装 |
+| `release/Jiao_Reader-Setup-0.3.1.exe` | 同学直接下载并安装 |
 | `release/SHA256SUMS.txt` | 核对下载文件的 SHA-256 |
-| `Jiao_Reader-Portable-0.3.0-win-x64.zip`（可选） | 不使用安装向导的便携版 |
+| `Jiao_Reader-Portable-0.3.1-win-x64.zip`（可选） | 不使用安装向导的便携版 |
 
 需要便携版时先运行 `npm run package:win`，然后压缩整个 `dist/Jiao_Reader-win32-x64/` 文件夹。单独上传里面的 `Jiao_Reader.exe` 无法运行。
 
 后续重新构建安装包时，在 PowerShell 更新校验文件：
 
 ```powershell
-$setupPath = 'release/Jiao_Reader-Setup-0.3.0.exe'
+$setupPath = 'release/Jiao_Reader-Setup-0.3.1.exe'
 $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLowerInvariant()
-"$setupHash  Jiao_Reader-Setup-0.3.0.exe" | Set-Content -LiteralPath 'release/SHA256SUMS.txt' -Encoding ascii
+"$setupHash  Jiao_Reader-Setup-0.3.1.exe" | Set-Content -LiteralPath 'release/SHA256SUMS.txt' -Encoding ascii
 ```
 
 该命令只写安装包的校验值；若另附便携版，可将它的校验值补充到同一文件。
@@ -67,8 +67,8 @@ $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLow
 ## 4. 创建 GitHub Release
 
 1. 确认上传的源码与刚构建的安装包一致，在仓库主页打开 **Releases → Draft a new release**。
-2. 新建标签 `v0.3.0`，Target 选择刚推送的 `main`。
-3. 标题填写 `Jiao_Reader 0.3.0`，填写下面的版本说明。
+2. 新建标签 `v0.3.1`，Target 选择刚推送的 `main`。
+3. 标题填写 `Jiao_Reader 0.3.1`，填写下面的版本说明。
 4. 在附件区域上传 Setup 和 `SHA256SUMS.txt`；便携版 ZIP 可选。
 5. 等待附件上传完成，再点击 **Publish release**。
 
@@ -77,16 +77,19 @@ $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLow
 可直接使用的版本说明：
 
 ```markdown
-## Jiao_Reader 0.3.0
+## Jiao_Reader 0.3.1
 
-- 新增划选翻译气泡，右侧仍保留原文与译文。
-- 简化空白页，加入高松灯书桌阅读同人插画。
+- 新增最近阅读的单条删除和清空功能，只移除列表记录，不删除原始 PDF。
+- 优化正文拖选，减少在行间空白和页边距误选大量文字或跳到页尾的问题。
+- 改进双栏正文选取；复杂版式请核对选中的原文，建议一次选择同一栏的一段。
+- 保留划选翻译气泡，右侧同步显示原文与译文。
+- 保留高松灯书桌阅读同人插画。
 - 支持连续滚动、页码显示与跳转、缩放及适合宽度。
 - 检测本机 Ollama，选择已经安装的本地模型。
 
 ### 安装
 
-Windows 10 / 11 x64：下载下方 Assets 中的 Jiao_Reader-Setup-0.3.0.exe。
+Windows 10 / 11 x64：下载下方 Assets 中的 Jiao_Reader-Setup-0.3.1.exe。
 安装包包含运行环境，不需要 Node.js 或 Python。
 Source code 是源码压缩包，普通使用者无需下载。
 

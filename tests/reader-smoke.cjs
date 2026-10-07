@@ -109,12 +109,15 @@ async function resolveTranslation(app, result) {
   const output = path.join(root, '.test-output');
   fs.mkdirSync(output, { recursive: true });
   const packaged = process.env.JIAO_PACKAGED_EXECUTABLE;
+  const userData = fs.mkdtempSync(path.join(output, 'reader-profile-'));
   const app = await _electron.launch({
     executablePath: packaged || process.env.JIAO_ELECTRON_EXECUTABLE || require('electron'),
-    args: packaged ? [] : [root],
+    args: [...(packaged ? [] : [root]), `--user-data-dir=${userData}`],
     timeout: 30000
   });
   try {
+    assert.equal(path.resolve(await app.evaluate(({ app }) => app.getPath('userData'))).toLowerCase(),
+      path.resolve(userData).toLowerCase(), 'Reader tests must use isolated preferences');
     const page = await app.firstWindow();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));

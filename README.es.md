@@ -6,13 +6,13 @@ Proyecto: [chouchongYHMing/Jiao_Reader](https://github.com/chouchongYHMing/Jiao_
 
 Lector local de artículos académicos en PDF para Windows 10 / 11 x64. Utiliza PDF.js para mostrar los documentos y los modelos que ya tengas instalados en Ollama en tu equipo para traducir el texto seleccionado.
 
-Una herramienta de lectura personal, actualmente en la versión `0.3.0`. La pantalla sin documentos abiertos muestra una ilustración no oficial de Takamatsu Tomori leyendo en su escritorio. Al abrir un artículo, puedes seleccionar texto para ver la traducción en una ventana emergente junto a la selección; el panel derecho conserva el texto original completo y su traducción.
+Una herramienta de lectura personal, actualmente en la versión `0.3.1`. La pantalla sin documentos abiertos muestra una ilustración no oficial de Takamatsu Tomori leyendo en su escritorio. Al abrir un artículo, puedes seleccionar texto para ver la traducción en una ventana emergente junto a la selección; el panel derecho conserva el texto original completo y su traducción.
 
 **La interfaz de la aplicación está actualmente en chino simplificado y el texto seleccionado se traduce al chino simplificado.** Los distintos idiomas de este README no implican que la interfaz de la aplicación esté traducida a esos idiomas.
 
 ## Para lectores: instalar y empezar a leer
 
-1. Descarga `Jiao_Reader-Setup-0.3.0.exe` desde [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) y ejecuta el instalador. Las descargas llamadas `Source code` contienen el código fuente; para utilizar la aplicación, basta con descargar Setup.
+1. Descarga `Jiao_Reader-Setup-0.3.1.exe` desde [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) y ejecuta el instalador. Las descargas llamadas `Source code` contienen el código fuente; para utilizar la aplicación, basta con descargar Setup.
 2. Abre Jiao_Reader desde el escritorio o el menú Inicio y abre un PDF o arrástralo a la ventana.
 3. Utiliza la rueda del ratón para leer de forma continua. La barra superior muestra la página actual y el número total de páginas. Puedes introducir un número de página para ir a ella o ajustar la vista con `+`, `−` y “适合宽度” (Ajustar al ancho).
 
@@ -55,6 +55,9 @@ El espacio en disco, la memoria RAM y la memoria gráfica necesarios dependen de
 | Traducir | Selecciona un fragmento de la capa de texto del PDF y consulta la traducción en la ventana emergente junto a la selección |
 | Copiar la traducción | Utiliza el botón de copia de la ventana emergente o de la tarjeta de traducción del panel derecho |
 | Cambiar de modelo | Actualiza la lista y selecciona un modelo instalado en el equipo |
+| Gestionar lecturas recientes | Elimina una entrada con su botón de eliminación o pulsa “清空” (Vaciar) para quitar todas; se conservan los PDF originales |
+
+La selección al arrastrar gestiona mejor los espacios entre líneas, los márgenes y el texto en dos columnas, y reduce las ampliaciones repentinas de la selección o los saltos al final de la página. Cuando las columnas se detectan con claridad, cada selección se mantiene en la columna inicial; inicia otra selección para traducir la otra columna. Si el documento tiene una disposición compleja, comprueba que el texto original del panel derecho coincida con lo que querías seleccionar. Eliminar entradas de las lecturas recientes solo modifica la lista: no borra los PDF del disco ni cierra el artículo que tienes abierto.
 
 Los archivos PDF se leen en el equipo. El texto seleccionado se envía al servicio local `127.0.0.1:11434`. Los PDF deben tener una capa de texto extraíble; los documentos escaneados requieren OCR previo. El tamaño máximo de cada PDF es de 200 MB y cada traducción admite hasta 3000 caracteres. El historial de traducciones solo se conserva durante la sesión actual de la aplicación.
 
@@ -76,7 +79,7 @@ Para generar un instalador distribuible:
 npm run build:win
 ```
 
-Resultado: `release\Jiao_Reader-Setup-0.3.0.exe`. Basta con compartir este único instalador con otros lectores. No necesitas enviar `node_modules`, el código fuente, la carpeta de compilación de la aplicación ni tus archivos de modelos de Ollama.
+Resultado: `release\Jiao_Reader-Setup-0.3.1.exe`. Basta con compartir este único instalador con otros lectores. No necesitas enviar `node_modules`, el código fuente, la carpeta de compilación de la aplicación ni tus archivos de modelos de Ollama.
 
 Para generar únicamente la carpeta de la aplicación `dist\Jiao_Reader-win32-x64` y validarla:
 

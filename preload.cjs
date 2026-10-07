@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('jiao', {
   open: () => ipcRenderer.invoke('reader:open'),
   openRecent: filePath => ipcRenderer.invoke('reader:open-recent', filePath),
   recent: () => ipcRenderer.invoke('reader:recent'),
+  removeRecent: filePath => ipcRenderer.invoke('reader:remove-recent', filePath),
+  clearRecent: () => ipcRenderer.invoke('reader:clear-recent'),
   status: () => ipcRenderer.invoke('reader:status'),
   selectModel: name => ipcRenderer.invoke('reader:select-model', name),
   startOllama: () => ipcRenderer.invoke('reader:start-ollama'),

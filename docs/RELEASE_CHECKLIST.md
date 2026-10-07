@@ -4,8 +4,8 @@
 
 ## 构建与内容
 
-1. 在 Windows x64 上执行 `npm ci`、`npm run check`、`npm test`、`npm run test:reader` 和 `npm run build:win`。
-2. 确认 `release/Jiao_Reader-Setup-0.3.0.exe` 存在且版本为 0.3.0。
+1. 在 Windows x64 上执行 `npm ci`、`npm run check`、`npm test`、`npm run test:reader`、`npm run test:selection`、`npm run test:recent` 和 `npm run build:win`。
+2. 确认 `release/Jiao_Reader-Setup-0.3.1.exe` 存在且版本为 0.3.1。
 3. 检查 `dist/Jiao_Reader-win32-x64/resources/app.asar` 包含 `main.cjs`、`preload.cjs`、`ollama.cjs`、完整 `app/` 阅读模块、PDF.js worker、字体和 cmap 资源。安装包直接封装此应用目录；安装后的可执行文件及 app.asar 应与此目录的文件具有相同 SHA-256。
 4. 确认包内没有 `node_modules` 开发依赖、测试、验证输出或维护者本地论文。保留应用目录中 Electron / Chromium 的许可证、`LICENSE.jiao-reader.txt`，以及 `app/pdfjs/` 内的许可证。
 5. `npm run package:win` 应仍生成 `dist/Jiao_Reader-win32-x64/Jiao_Reader.exe`，并可打开 PDF。
@@ -30,6 +30,10 @@
 - 打开带文字层的多页论文，滚轮能够从第一页读到最后一页，当前页和总页数始终可见并正确更新。
 - 在文档中部连续点击 `+` / `−`、快速交替缩放、使用“适合宽度”；页面不消失、不永久空白，阅读位置保持合理。
 - 缩放后仍能选中文字，选择范围与可见文字对齐。
+- 向上、向下跨行拖选正文，经过行间空白、页边距和双栏中缝时，不误选全文或突然跳到页尾；分别核对左栏、右栏的选文。
+- 在页面底边、阅读视窗边缘和已有选区上再次拖动，选区保持可预期；拖选中滚动时，起点文字层不会被虚拟化回收。
+- 单条删除最近阅读后，其余条目和计数更新正确，重启后已删除记录不再显示；清空后列表为空，重启仍为空。
+- 删除或清空最近阅读时，不关闭当前文献，不改变当前阅读页；原始 PDF 仍存在且可重新打开。
 - 输入有效页码能跳转，超出页数或无效输入不会让页面消失。
 - 关闭和重开 PDF、切换到另一篇 PDF 后，页码、缩放和渲染状态正确。
 - 打开文件前，空白页读书插画正常显示；打包后也包含该资源。

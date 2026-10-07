@@ -1,4 +1,6 @@
 import * as pdfjs from './pdfjs/pdf.mjs';
+import { PdfSelection } from './pdf-selection.mjs';
+import { orderTextLayer } from './text-order.mjs';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('./pdfjs/pdf.worker.mjs', import.meta.url).href;
 const MIN_SCALE = 0.6;
@@ -16,6 +18,7 @@ export class PdfReader {
     this.version = 0;
     this.ready = false;
     this.scrollFrame = 0;
+    this.selection = new PdfSelection(container, () => this.scheduleViewportUpdate());
     container.addEventListener('scroll', () => this.scheduleViewportUpdate(), { passive: true });
     this.resizeObserver = new ResizeObserver(() => this.scheduleViewportUpdate());
     this.resizeObserver.observe(container);
@@ -28,6 +31,8 @@ export class PdfReader {
   }
 
   disposeDocument() {
+    this.selection.cancel();
+    window.getSelection()?.removeAllRanges();
     this.observer?.disconnect();
     for (const record of this.records.values()) this.releaseSurface(record);
     this.records.clear();
@@ -135,6 +140,7 @@ export class PdfReader {
     this.cancelPending(record);
     record.textTask?.cancel();
     if (record.canvas) { record.canvas.remove(); record.canvas.width = 0; }
+    this.selection.detach(record.layer);
     record.layer?.remove();
     record.canvas = record.layer = record.textTask = null;
     record.renderedScale = 0;
@@ -168,13 +174,16 @@ export class PdfReader {
       });
       await pending.renderTask.promise;
       if (!valid()) return;
-      const content = await record.page.getTextContent();
+      const content = await record.page.getTextContent({ includeMarkedContent: true });
       if (!valid()) return;
       pending.textTask = new pdfjs.TextLayer({ textContentSource: content, container: layer, viewport });
       await pending.textTask.render();
       if (!valid()) return;
+      orderTextLayer(layer, content, viewport);
+      this.selection.attach(layer);
       record.textTask?.cancel();
       if (record.canvas) { record.canvas.remove(); record.canvas.width = 0; }
+      this.selection.detach(record.layer);
       record.layer?.remove();
       record.canvas = canvas;
       record.layer = layer;
@@ -206,10 +215,12 @@ export class PdfReader {
     const previousWidth = this.container.scrollWidth;
     const horizontalFraction = (this.container.scrollLeft + this.container.clientWidth / 2) / previousWidth;
     this.scale = scale;
+    this.selection.cancel();
     window.getSelection()?.removeAllRanges();
     for (const record of this.records.values()) {
       this.cancelPending(record);
       record.textTask?.cancel();
+      this.selection.detach(record.layer);
       record.layer?.remove();
       record.layer = record.textTask = null;
       record.renderedScale = 0;
@@ -268,7 +279,8 @@ export class PdfReader {
     for (const record of this.records.values()) {
       const rect = record.body.getBoundingClientRect();
       if (rect.bottom >= frame.top - margin && rect.top <= frame.bottom + margin) this.render(record);
-      else if (rect.bottom < frame.top - 3 * frame.height || rect.top > frame.bottom + 3 * frame.height) this.releaseSurface(record);
+      else if (!this.selection.protects(record.layer) &&
+        (rect.bottom < frame.top - 3 * frame.height || rect.top > frame.bottom + 3 * frame.height)) this.releaseSurface(record);
     }
     this.notify();
   }
