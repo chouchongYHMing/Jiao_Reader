@@ -8,10 +8,11 @@ const MAX_SCALE = 2.6;
 
 // Keep the scroll container and page shells stable while replacing rendered surfaces.
 export class PdfReader {
-  constructor(container, pages, onChange) {
+  constructor(container, pages, onChange, onPageRendered = () => {}) {
     this.container = container;
     this.pages = pages;
     this.onChange = onChange;
+    this.onPageRendered = onPageRendered;
     this.scale = 1.15;
     this.currentPage = 0;
     this.records = new Map();
@@ -142,6 +143,7 @@ export class PdfReader {
     if (record.canvas) { record.canvas.remove(); record.canvas.width = 0; }
     this.selection.detach(record.layer);
     record.layer?.remove();
+    record.body.querySelector('.pdf-annotation-layer')?.remove();
     record.canvas = record.layer = record.textTask = null;
     record.renderedScale = 0;
     record.body.classList.remove('rendered');
@@ -192,6 +194,7 @@ export class PdfReader {
       record.renderedScale = scale;
       record.body.classList.add('rendered');
       pending.committed = true;
+      this.onPageRendered(record);
     } catch (error) {
       if (valid()) record.loading.textContent = `第 ${record.number} 页加载失败：${error.message}`;
     } finally {

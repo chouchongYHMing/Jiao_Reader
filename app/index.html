@@ -4,9 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; worker-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>Jiao Reader 0.3.2</title>
+  <title>Jiao Reader 0.3.4</title>
   <link rel="stylesheet" href="reader.css">
   <link rel="stylesheet" href="translation-bubble.css">
+  <link rel="stylesheet" href="annotations.css">
+  <link rel="stylesheet" href="pdf-highlights.css">
 </head>
 <body>
   <div class="app-shell">
@@ -25,6 +27,7 @@
       <header class="topbar">
         <div class="document-title"><span class="eyebrow">正在阅读</span><strong id="documentName">尚未打开文献</strong></div>
         <div class="toolbar-controls">
+          <button id="annotationsButton" class="annotations-button" type="button" aria-expanded="false" aria-controls="annotationPanel" title="查看这篇文献的标签和笔记" disabled>标注列表 <span>0</span></button>
           <div class="page-control"><button id="previousPage" type="button" aria-label="上一页" title="上一页" disabled>‹</button><span>第</span><input id="pageInput" type="number" min="1" value="0" aria-label="跳转页码" disabled><span>/</span><span id="pageTotal">0</span><span>页</span><button id="nextPage" type="button" aria-label="下一页" title="下一页" disabled>›</button></div>
           <div class="zoom-control"><button id="zoomOut" aria-label="缩小" title="缩小" disabled>−</button><span id="zoomValue">115%</span><button id="zoomIn" aria-label="放大" title="放大" disabled>＋</button></div>
           <button id="fitButton" class="tool-button" type="button" title="适合宽度" disabled>适合宽度</button>
@@ -62,7 +65,7 @@
         <section class="translation-card result-card"><div class="card-heading"><span>译文</span><div><button id="retryTranslation" class="text-button" type="button" disabled>重新翻译</button><button id="copyButton" class="text-button" type="button" disabled>复制译文</button></div></div><div id="translationText" class="card-body placeholder">选中文字后会自动翻译。公式、变量和引用编号会尽量保留。</div></section>
         <div class="translation-help">翻译在本机完成，质量取决于所选模型。模型下载与导入请使用 Ollama。</div>
       </div>
-      <div class="history-block"><div class="pane-heading">本次阅读 <span id="historyCount">0</span></div><div id="historyList" class="history-list"><p class="hint">翻译记录会出现在这里。</p></div></div>
+      <div class="history-block"><div class="pane-heading">本次阅读 <span id="historyCount">0</span></div><div id="historyList" class="history-list"><p class="hint">划选正文后，右键记录可添加标签或笔记。</p></div></div>
     </aside>
   </div>
   <div id="dropOverlay" class="drop-overlay" hidden><div>将 PDF 放到这里打开</div></div>

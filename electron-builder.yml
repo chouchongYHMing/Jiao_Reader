@@ -11,6 +11,7 @@ files:
   - main.cjs
   - preload.cjs
   - ollama.cjs
+  - reading-store.cjs
   - package.json
   - app/**/*
   - '!**/*.map'

@@ -1,0 +1,5 @@
+.pdf-annotation-layer{position:absolute;inset:0;z-index:0;pointer-events:none;user-select:none;overflow:clip}
+.pdf-annotation-highlight{position:absolute;display:block;pointer-events:none;user-select:none;border-radius:2px;background:linear-gradient(to bottom,transparent 10%,var(--annotation-color) 10%,var(--annotation-color) 91%,transparent 91%);opacity:.55}
+.history-item span.history-note-mark{display:flex;flex-wrap:wrap;gap:4px;white-space:normal}
+.history-note-mark .annotation-tag{font-size:10px;line-height:1.45}
+.history-note-mark .history-comment-mark{font-size:10px;color:#6e816b;align-self:center}

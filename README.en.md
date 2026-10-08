@@ -6,23 +6,25 @@ Project: [chouchongYHMing/Jiao_Reader](https://github.com/chouchongYHMing/Jiao_R
 
 A local PDF reader for academic papers on Windows 10 / 11 x64. It uses PDF.js to display papers and models already installed in your local Ollama instance to translate selected text.
 
-A personal reading tool, currently at version `0.3.2`. Once you open a paper, select text to see its translation in a nearby popup; the right panel keeps the full source text and translation.
+A personal reading tool, currently at version `0.3.4`. Once you open a paper, select text to see its translation in a nearby popup; the right panel keeps the full source text and translation.
 
 **The application interface is currently in Simplified Chinese, and selected text is translated into Simplified Chinese.** These README translations do not indicate that the application has a multilingual interface.
 
 ## For readers: install and start reading
 
-1. Download `Jiao_Reader-Setup-0.3.2.exe` from [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases), then run the installer. The `Source code` downloads contain the source code; to use the application, choose Setup.
+1. Download `Jiao_Reader-Setup-0.3.4.exe` from [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases), then run the installer. The `Source code` downloads contain the source code; to use the application, choose Setup.
 2. Open Jiao_Reader from the desktop or Start menu, then open or drag in a PDF.
 3. Use the mouse wheel to read continuously. The top toolbar shows the current page and total page count. Enter a page number to jump to it, or use `+`, `−`, and “适合宽度” (Fit width) to adjust the view.
 
-The `0.3.2` release reuses the unchanged Electron launcher from `0.3.1`. Windows `.exe` file properties may therefore still show `0.3.1`; the application and installer versions are `0.3.2`.
+The `0.3.4` release reuses the unchanged Electron launcher from `0.3.1`. Windows `.exe` file properties may therefore still show `0.3.1`; the application and installer versions are `0.3.4`.
 
 The installer includes the desktop runtime. Readers do not need to install Node.js, Python, or development tools. Installation is restricted to the current Windows user. You can choose another installation folder if you have permission to write to it. The installer creates Start menu and desktop shortcuts and an uninstall entry in Windows Installed apps. The default installation location does not require administrator privileges.
 
 **The current release is not code signed.** Windows SmartScreen or your browser may display an “Unknown publisher” or “Windows protected your PC” warning. This is unrelated to whether Node.js or Python is installed. Verify the download source before proceeding. Code signing and publisher reputation are tasks for a future release; users should not be asked to disable system protection.
 
 For the full first-use instructions, see the [Quick start guide (Chinese)](docs/QUICKSTART.zh-CN.md).
+
+**Upgrade from an older version:** close Jiao_Reader and run the new Setup using the same installation folder. You do not need to uninstall first. Recent papers, priorities, saved notes, and your model selection are retained; Ollama and the original PDFs are unaffected. There is no automatic updater. For a portable version, replace the entire application folder; Setup does not update a portable copy in another location.
 
 ## Set up local translation
 
@@ -58,10 +60,23 @@ Disk, RAM, and video memory requirements depend on the model you choose. The fir
 | Copy a translation | Use the copy button in the popup or the translation card on the right |
 | Change models | Refresh the model list and select a model installed locally |
 | Manage recent papers | Remove one entry with its delete button, or use “清空” (Clear) to remove all entries; the original PDFs are kept |
+| Set reading priorities | Right-click a recent paper and choose “优先级 +1” (Increase priority by 1) or “优先级清零” (Reset priority); its badge shows the priority |
+| Add tags or notes | Select text, then right-click its entry in “本次阅读” (This reading session) at the bottom right and choose “添加标签” (Add tags) or “写评论 / 笔记” (Write a comment / note) |
+| View saved annotations | Click “标签与笔记” (Tags and notes), to the right of the document title and left of the page controls; jump to a page, edit, or delete a note |
 
 Drag selection handles gaps between lines, page margins, and two-column text more reliably, reducing sudden expansion of the selection or jumps to the bottom of a page. For clearly detected columns, each drag stays in its starting column; start a new selection to translate the other column. For complex layouts, check that the source text in the right panel matches your intended selection. Removing recent entries only changes the list: it neither deletes PDFs from disk nor closes the paper currently open.
 
-PDF files are read locally. Selected text is sent to the local endpoint `127.0.0.1:11434`. PDFs must have an extractable text layer; scanned documents need OCR first. The maximum PDF size is 200 MB, and each translation is limited to 3,000 characters. Translation history is kept only for the current application session.
+Recent papers are sorted by **priority from highest to lowest, then by most recent reading time**. Their right-click menu contains only the increase and reset actions. Priorities are stored locally with the recent-paper records.
+
+Tags, comments, notes, and annotations do not require Ollama. Every text selection creates a reading-session entry with its source text and page, so you can annotate it before translating. Separate tags with commas; a selection's tags and note can be edited together. The top list shows the most recently updated notes first, with their source quotes and page numbers.
+
+Tags offer six soft highlighter colors: wheat yellow, sage green, mist blue, lavender, apricot, and soft coral. Choose a color for each tag in the editor; saved tags and their PDF passages are highlighted. A passage with several tags uses its first tag’s color. Comment-only notes can also have a highlight color. Within a document, the same tag has one consistent color; recoloring it updates its related passages.
+
+Click a tag above the list to collect its related passages and notes. Each passage keeps its own comment, sorted by its last edit; comments do not overwrite one another. Choose “全部” (All) to return to the complete list. New annotations save their page positions, so highlights survive zoom and restart. Older annotations receive highlights only when their quotation matches uniquely. Highlights stay in the reader and do not write into the PDF.
+
+Saved annotations are stored locally and survive restarts. A copied or renamed PDF with exactly the same content keeps the same annotations. Notes do not modify or write into the PDF. Reading-session selections and translations are **temporary records for the document currently open** and are cleared when switching documents or restarting; saved tags and notes remain available independently.
+
+PDF files are read locally. When translating, selected text is sent to the local endpoint `127.0.0.1:11434`. PDFs must have an extractable text layer; scanned documents need OCR first. The maximum PDF size is 200 MB, and each translation is limited to 3,000 characters. Each annotation can quote up to 12,000 characters and contain up to 20 tags (50 characters each) and a 6,000-character note.
 
 ## Development and packaging
 
@@ -81,7 +96,7 @@ Build a distributable installer:
 npm run build:win
 ```
 
-Output: `release\Jiao_Reader-Setup-0.3.2.exe`. Share this single installer with other readers. You do not need to send `node_modules`, the source code, the application build folder, or your own Ollama model files.
+Output: `release\Jiao_Reader-Setup-0.3.4.exe`. Share this single installer with other readers. You do not need to send `node_modules`, the source code, the application build folder, or your own Ollama model files.
 
 Build only the application folder `dist\Jiao_Reader-win32-x64` for validation:
 
@@ -109,6 +124,7 @@ Commit the source code to the GitHub repository. Upload the Setup installer and 
 
 ```text
 main.cjs                      Electron main process, window, PDF file operations, and desktop APIs
+reading-store.cjs             Local recent-paper records, priorities, and annotations linked to PDF content
 ollama.cjs                    Ollama detection, model listing, and local translation
 preload.cjs                   Restricted desktop APIs exposed to the page
 app/                          Reading interface, PDF rendering, and interaction modules

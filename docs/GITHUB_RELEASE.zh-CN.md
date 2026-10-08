@@ -10,7 +10,7 @@
 
 本地建议提交：
 
-- `app/`、`main.cjs`、`preload.cjs`、`ollama.cjs` 等运行源码。
+- `app/`、`main.cjs`、`preload.cjs`、`ollama.cjs`、`reading-store.cjs` 等运行源码。
 - `package.json`、`package-lock.json`、`electron-builder.yml`、`build-resources/` 和 `tests/`。
 - `README.md`、`LICENSE`、`docs/`、`.gitignore` 及应用实际使用的图标、资源和第三方许可证。
 
@@ -26,7 +26,7 @@ git init -b main
 git status --short
 git add .
 git diff --cached --stat
-git commit -m "Release Jiao_Reader 0.3.2"
+git commit -m "Release Jiao_Reader 0.3.4"
 git remote add origin https://github.com/chouchongYHMing/Jiao_Reader.git
 git push -u origin main
 ```
@@ -41,6 +41,8 @@ git push -u origin main
 npm ci
 npm run check
 npm test
+npm run test:reading
+npm run test:tags
 npm run build:win
 ```
 
@@ -48,20 +50,22 @@ npm run build:win
 
 | 文件 | 用途 |
 | --- | --- |
-| `release/Jiao_Reader-Setup-0.3.2.exe` | 同学直接下载并安装 |
+| `release/Jiao_Reader-Setup-0.3.4.exe` | 同学直接下载并安装 |
 | `release/SHA256SUMS.txt` | 核对下载文件的 SHA-256 |
-| `Jiao_Reader-Portable-0.3.2-win-x64.zip`（可选） | 不使用安装向导的便携版 |
+| `Jiao_Reader-Portable-0.3.4-win-x64.zip`（可选） | 不使用安装向导的便携版 |
 
 需要便携版时先运行 `npm run package:win`，然后压缩整个 `dist/Jiao_Reader-win32-x64/` 文件夹。单独上传里面的 `Jiao_Reader.exe` 无法运行。
 
-本次 `0.3.2` 发行采用一次资源更新封装：沿用已发行 `0.3.1` 便携版的 Electron 启动程序，更新 `app.asar` 和随包文档，再生成版本为 `0.3.2` 的安装包。Windows 的 `.exe` 文件属性可能仍显示 `0.3.1`，应用读取的版本为 `0.3.2`。启动程序来源、SHA-256 及原生运行时和图标的校验结果记录在 `release/VALIDATION-0.3.2.md`。常规 `npm run build:win` 会重新生成启动程序，不保证其字节与本次发行包的启动程序一致。
+本次 `0.3.4` 发行沿用已发行 `0.3.1` 便携版的 Electron 启动程序，更新运行源码、`app.asar` 和随包文档，再生成版本为 `0.3.4` 的安装包。Windows 的 `.exe` 文件属性可能仍显示 `0.3.1`，应用读取的版本为 `0.3.4`。启动程序来源、SHA-256 及原生运行时和图标的校验结果记录在 `release/VALIDATION-0.3.4.md`。常规 `npm run build:win` 会重新生成启动程序，不保证其字节与本次发行包的启动程序一致。
+
+旧版用户先关闭 Jiao_Reader，再运行新版 Setup 并保持原安装目录，直接覆盖升级即可；不必先卸载，也没有软件内自动更新功能。最近阅读、优先级、已保存笔记和模型选择保留，原始 PDF 与 Ollama 不受影响。便携版需要替换完整程序目录，Setup 不会自动更新其他位置的便携版。
 
 后续重新构建安装包时，在 PowerShell 更新校验文件：
 
 ```powershell
-$setupPath = 'release/Jiao_Reader-Setup-0.3.2.exe'
+$setupPath = 'release/Jiao_Reader-Setup-0.3.4.exe'
 $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLowerInvariant()
-"$setupHash  Jiao_Reader-Setup-0.3.2.exe" | Set-Content -LiteralPath 'release/SHA256SUMS.txt' -Encoding ascii
+"$setupHash  Jiao_Reader-Setup-0.3.4.exe" | Set-Content -LiteralPath 'release/SHA256SUMS.txt' -Encoding ascii
 ```
 
 该命令只写安装包的校验值；若另附便携版，可将它的校验值补充到同一文件。
@@ -69,8 +73,8 @@ $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLow
 ## 4. 创建 GitHub Release
 
 1. 确认上传的源码与刚构建的安装包一致，在仓库主页打开 **Releases → Draft a new release**。
-2. 新建标签 `v0.3.2`，Target 选择刚推送的 `main`。
-3. 标题填写 `Jiao_Reader 0.3.2`，填写下面的版本说明。
+2. 新建标签 `v0.3.4`，Target 选择刚推送的 `main`。
+3. 标题填写 `Jiao_Reader 0.3.4`，填写下面的版本说明。
 4. 在附件区域上传 Setup 和 `SHA256SUMS.txt`；便携版 ZIP 可选。
 5. 等待附件上传完成，再点击 **Publish release**。
 
@@ -79,27 +83,32 @@ $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLow
 可直接使用的版本说明：
 
 ```markdown
-## Jiao_Reader 0.3.2
+## Jiao_Reader 0.3.4
 
-- 新增最近阅读的单条删除和清空功能，只移除列表记录，不删除原始 PDF。
-- 优化正文拖选，减少在行间空白和页边距误选大量文字或跳到页尾的问题。
-- 改进双栏正文选取；复杂版式请核对选中的原文，建议一次选择同一栏的一段。
-- 保留划选翻译气泡，右侧同步显示原文与译文。
-- 简化首页，只保留文件打开入口和使用提示；保留应用图标。
-- 支持连续滚动、页码显示与跳转、缩放及适合宽度。
-- 检测本机 Ollama，选择已经安装的本地模型。
+- 最近阅读右键新增“优先级 +1”和“优先级清零”，角标显示当前优先级。
+- 最近阅读先按优先级降序，再按最近阅读时间排序，优先级重启后保留。
+- 标签新增六种荧光笔配色，保存后对应选文在 PDF 中同步高亮，缩放和重启后可恢复。
+- 可按同一 tag 汇总相关选文与笔记；每段评论独立保存。同篇文献的同名标签改色会同步，不覆盖评论。
+- 划选正文后，可在右下角“本次阅读”中右键选文，添加标签、评论、笔记或注释；无需 Ollama，也无需先翻译。
+- 顶部文献标题右侧、页码左侧新增“标签与笔记”列表，按最近更新时间排序，支持跳回对应页码、编辑和删除。
+- 标签和笔记独立保存在本机，重启后仍在；复制或重命名内容完全相同的 PDF 仍关联原有标注，不改动 PDF 文件。
+- 本次阅读的选文与翻译历史仅为当前文献的暂存记录；切换文献或重启会清空，已保存笔记不受影响。
+- 保留连续阅读、缩放、页码跳转、划选翻译气泡和本地模型选择。
+- 同步更新中文、英文、加泰语和西班牙语 README。
 
 ### 安装
 
-Windows 10 / 11 x64：下载下方 Assets 中的 Jiao_Reader-Setup-0.3.2.exe。
+Windows 10 / 11 x64：下载下方 Assets 中的 Jiao_Reader-Setup-0.3.4.exe。
 安装包包含运行环境，不需要 Node.js 或 Python。
 Source code 是源码压缩包，普通使用者无需下载。
+旧版升级：关闭阅读器后，用新版 Setup 覆盖原安装目录，无需先卸载。
+最近阅读、已保存笔记和模型选择保留；软件没有自动更新功能。
 
 ### 翻译准备
 
 先安装并启动 Ollama，用 ollama pull qwen3:4b-instruct 准备模型，
 然后在阅读器中刷新并选择本地模型。
-安装包不包含 Ollama 或模型；只阅读 PDF 无需准备模型。
+安装包不包含 Ollama 或模型；阅读、添加标签和笔记无需准备模型。
 
 当前安装包尚未签名，Windows 可能显示未知发布者。
 ```

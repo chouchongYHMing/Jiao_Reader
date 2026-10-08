@@ -6,23 +6,25 @@ Projecte: [chouchongYHMing/Jiao_Reader](https://github.com/chouchongYHMing/Jiao_
 
 Lector local d’articles acadèmics en PDF per a Windows 10 / 11 x64. Utilitza PDF.js per mostrar els documents i els models ja instal·lats a l’Ollama de l’ordinador per traduir el text seleccionat.
 
-És una eina de lectura personal; la versió actual és la `0.3.2`. Quan obres un article i hi selecciones text, la traducció apareix en un globus al costat de la selecció. El panell dret conserva tant el text original com la traducció completa.
+És una eina de lectura personal; la versió actual és la `0.3.4`. Quan obres un article i hi selecciones text, la traducció apareix en un globus al costat de la selecció. El panell dret conserva tant el text original com la traducció completa.
 
 **La interfície de l’aplicació és actualment en xinès simplificat i les traduccions del text seleccionat també són al xinès simplificat.** Aquesta versió en català correspon únicament a la documentació; no afegeix una interfície ni traduccions al català.
 
 ## Per a usuaris: instal·lar i començar a llegir
 
-1. Descarrega `Jiao_Reader-Setup-0.3.2.exe` de la pàgina [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) i executa’l per completar la instal·lació. Els fitxers etiquetats com a `Source code` contenen el codi font; per utilitzar l’aplicació, només cal descarregar el Setup.
+1. Descarrega `Jiao_Reader-Setup-0.3.4.exe` de la pàgina [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) i executa’l per completar la instal·lació. Els fitxers etiquetats com a `Source code` contenen el codi font; per utilitzar l’aplicació, només cal descarregar el Setup.
 2. Obre Jiao_Reader des de l’escriptori o el menú Inici i obre un PDF o arrossega’l a la finestra.
 3. Llegeix de manera contínua amb la roda del ratolí. La barra superior mostra la pàgina actual i el nombre total de pàgines. Pots introduir un número de pàgina per anar-hi directament o ajustar la visualització amb `+`, `−` i “适合宽度” (ajusta a l’amplada).
 
-La versió `0.3.2` reutilitza sense canvis l’executable d’inici d’Electron de la versió `0.3.1`. Les propietats del fitxer `.exe` a Windows poden continuar mostrant `0.3.1`; les versions de l’aplicació i de l’instal·lador són `0.3.2`.
+La versió `0.3.4` reutilitza sense canvis l’executable d’inici d’Electron de la versió `0.3.1`. Les propietats del fitxer `.exe` a Windows poden continuar mostrant `0.3.1`; les versions de l’aplicació i de l’instal·lador són `0.3.4`.
 
 L’instal·lador inclou l’entorn d’execució de l’aplicació. Els companys amb qui la comparteixis no han d’instal·lar Node.js, Python ni eines de desenvolupament. Per defecte, s’instal·la només per a l’usuari actual de Windows. Pots canviar la carpeta de destinació per una altra on tinguis permís d’escriptura. L’instal·lador crea les dreceres de l’escriptori i del menú Inici, així com l’entrada de desinstal·lació a les aplicacions instal·lades de Windows. La carpeta predeterminada no requereix permisos d’administrador.
 
 **La versió distribuïda encara no té signatura de codi.** Windows SmartScreen o el navegador poden mostrar un avís d’editor desconegut o indicar que Windows ha protegit l’ordinador. Això no està relacionat amb la manca de Node.js o Python. Abans d’executar el fitxer, comprova’n la procedència. L’obtenció d’un certificat de signatura i de reputació per a l’aplicació són tasques pendents per a futures publicacions; no cal desactivar les proteccions del sistema.
 
 Consulta tots els passos inicials a la [guia d’inici ràpid, en xinès](docs/QUICKSTART.zh-CN.md).
+
+**Actualitzar des d’una versió anterior:** tanca Jiao_Reader i executa el Setup nou amb la mateixa carpeta d’instal·lació. No cal desinstal·lar abans. Es conserven les lectures recents, les prioritats, les notes desades i el model seleccionat; Ollama i els PDF originals no es modifiquen. No hi ha actualització automàtica. Per actualitzar una versió portàtil, substitueix tota la carpeta de l’aplicació; el Setup no actualitza una còpia portàtil ubicada en un altre lloc.
 
 ## Preparar la traducció local
 
@@ -58,10 +60,23 @@ L’espai en disc, la memòria RAM i la memòria gràfica necessaris depenen del
 | Copiar la traducció | Prem el botó de còpia del globus o de la targeta de traducció del panell dret |
 | Canviar de model | Actualitza la llista i selecciona un model instal·lat a l’ordinador |
 | Gestionar lectures recents | Elimina una entrada amb el seu botó d’eliminació o prem “清空” (buida) per treure-les totes; es conserven els PDF originals |
+| Ajustar la prioritat de lectura | Fes clic dret sobre una lectura recent i tria “优先级 +1” (augmenta la prioritat en 1) o “优先级清零” (posa-la a zero); l’indicador de l’entrada mostra la prioritat |
+| Afegir etiquetes o notes | Selecciona text i fes clic dret sobre la seva entrada a “本次阅读” (sessió de lectura), a baix a la dreta; tria “添加标签” (afegeix etiquetes) o “写评论 / 笔记” (escriu un comentari / nota) |
+| Consultar anotacions desades | Prem “标签与笔记” (etiquetes i notes), a la dreta del títol del document i a l’esquerra del control de pàgines; pots anar a la pàgina, editar o eliminar una nota |
 
 La selecció per arrossegament gestiona millor els espais entre línies, els marges de pàgina i el text en dues columnes, i redueix les ampliacions sobtades de la selecció o els salts al final de la pàgina. Quan es detecten clarament les columnes, cada selecció es manté a la columna on comença; inicia una selecció nova per traduir l’altra columna. Si el document té una disposició complexa, comprova que el text original del panell dret coincideixi amb el que volies seleccionar. Eliminar entrades de les lectures recents només modifica la llista: no esborra els PDF del disc ni tanca l’article que tens obert.
 
-Els PDF es llegeixen localment. El text seleccionat s’envia al servei local a `127.0.0.1:11434`. Actualment, cal que el PDF tingui una capa de text que es pugui extreure; els documents escanejats requereixen OCR previ. Cada PDF pot ocupar com a màxim 200 MB i cada traducció pot contenir fins a 3.000 caràcters. L’historial de traduccions només es conserva durant la sessió actual de l’aplicació.
+Les lectures recents s’ordenen per **prioritat de més alta a més baixa i, després, per data de lectura de més recent a més antiga**. El menú del clic dret només ofereix augmentar la prioritat o posar-la a zero. Les prioritats es desen localment amb les lectures recents.
+
+Les etiquetes, els comentaris, les notes i les anotacions no requereixen Ollama. Cada selecció de text crea una entrada de lectura amb el fragment original i la pàgina, de manera que pots anotar-la abans de traduir. Separa les etiquetes amb comes; pots editar juntes les etiquetes i la nota d’una mateixa selecció. La llista superior mostra primer les notes actualitzades més recentment, amb el fragment citat i el número de pàgina.
+
+Les etiquetes ofereixen sis colors suaus de ressaltador: groc blat, verd sàlvia, blau boirós, lavanda, albercoc i corall suau. Tria un color per a cada etiqueta a l’editor; les etiquetes desades i els seus fragments al PDF es ressalten. Un fragment amb diverses etiquetes fa servir el color de la primera. Les notes que només tenen comentari també poden tenir color. Dins d’un document, una mateixa etiqueta té un color coherent; canviar-lo actualitza els fragments relacionats.
+
+Prem una etiqueta damunt de la llista per reunir-ne els fragments i les notes. Cada fragment conserva el seu propi comentari, ordenat per l’última modificació; els comentaris no se sobreescriuen. Tria “全部” (totes) per tornar a la llista completa. Les anotacions noves desen la posició a la pàgina, de manera que el ressaltat es conserva en ampliar i reiniciar. Les anotacions antigues només es ressalten si la citació coincideix de manera única. El ressaltat es conserva al lector i no s’escriu al PDF.
+
+Les anotacions es desen a l’ordinador i es conserven després de reiniciar. Si copies o canvies el nom d’un PDF amb exactament el mateix contingut, mantindrà les mateixes anotacions. Les notes no s’escriuen al PDF ni el modifiquen. Les seleccions i traduccions de la sessió són **registres temporals del document obert** i s’esborren en canviar de document o reiniciar; les etiquetes i notes desades es conserven de manera independent.
+
+Els PDF es llegeixen localment. Quan tradueixes, el text seleccionat s’envia al servei local a `127.0.0.1:11434`. Actualment, cal que el PDF tingui una capa de text que es pugui extreure; els documents escanejats requereixen OCR previ. Cada PDF pot ocupar com a màxim 200 MB i cada traducció pot contenir fins a 3.000 caràcters. Cada anotació pot citar fins a 12.000 caràcters i incloure fins a 20 etiquetes (50 caràcters cadascuna) i una nota de 6.000 caràcters.
 
 ## Desenvolupament i generació dels paquets
 
@@ -81,7 +96,7 @@ Per generar un instal·lador que es pugui distribuir:
 npm run build:win
 ```
 
-Fitxer resultant: `release\Jiao_Reader-Setup-0.3.2.exe`. Només cal compartir aquest instal·lador amb els companys. No cal enviar-los `node_modules`, el codi font, la carpeta de compilació de l’aplicació ni els fitxers dels teus models d’Ollama.
+Fitxer resultant: `release\Jiao_Reader-Setup-0.3.4.exe`. Només cal compartir aquest instal·lador amb els companys. No cal enviar-los `node_modules`, el codi font, la carpeta de compilació de l’aplicació ni els fitxers dels teus models d’Ollama.
 
 Per generar només la carpeta de l’aplicació `dist\Jiao_Reader-win32-x64` i poder-la verificar:
 
@@ -109,6 +124,7 @@ Puja el codi font al repositori de GitHub i afegeix l’instal·lador Setup i `S
 
 ```text
 main.cjs                      Procés principal d’Electron, finestres, fitxers PDF i interfícies d’escriptori
+reading-store.cjs             Lectures recents, prioritats i anotacions locals vinculades al contingut del PDF
 ollama.cjs                    Detecció d’Ollama, llista de models i traducció local
 preload.cjs                   Restricció de les interfícies d’escriptori accessibles des de la pàgina
 app/                          Interfície de lectura, renderització de PDF i mòduls d’interacció

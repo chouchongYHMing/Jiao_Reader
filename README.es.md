@@ -6,23 +6,25 @@ Proyecto: [chouchongYHMing/Jiao_Reader](https://github.com/chouchongYHMing/Jiao_
 
 Lector local de artículos académicos en PDF para Windows 10 / 11 x64. Utiliza PDF.js para mostrar los documentos y los modelos que ya tengas instalados en Ollama en tu equipo para traducir el texto seleccionado.
 
-Una herramienta de lectura personal, actualmente en la versión `0.3.2`. Al abrir un artículo, puedes seleccionar texto para ver la traducción en una ventana emergente junto a la selección; el panel derecho conserva el texto original completo y su traducción.
+Una herramienta de lectura personal, actualmente en la versión `0.3.4`. Al abrir un artículo, puedes seleccionar texto para ver la traducción en una ventana emergente junto a la selección; el panel derecho conserva el texto original completo y su traducción.
 
 **La interfaz de la aplicación está actualmente en chino simplificado y el texto seleccionado se traduce al chino simplificado.** Los distintos idiomas de este README no implican que la interfaz de la aplicación esté traducida a esos idiomas.
 
 ## Para lectores: instalar y empezar a leer
 
-1. Descarga `Jiao_Reader-Setup-0.3.2.exe` desde [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) y ejecuta el instalador. Las descargas llamadas `Source code` contienen el código fuente; para utilizar la aplicación, basta con descargar Setup.
+1. Descarga `Jiao_Reader-Setup-0.3.4.exe` desde [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) y ejecuta el instalador. Las descargas llamadas `Source code` contienen el código fuente; para utilizar la aplicación, basta con descargar Setup.
 2. Abre Jiao_Reader desde el escritorio o el menú Inicio y abre un PDF o arrástralo a la ventana.
 3. Utiliza la rueda del ratón para leer de forma continua. La barra superior muestra la página actual y el número total de páginas. Puedes introducir un número de página para ir a ella o ajustar la vista con `+`, `−` y “适合宽度” (Ajustar al ancho).
 
-La versión `0.3.2` reutiliza sin cambios el ejecutable de inicio de Electron de `0.3.1`. Las propiedades del archivo `.exe` en Windows pueden seguir mostrando `0.3.1`; las versiones de la aplicación y del instalador son `0.3.2`.
+La versión `0.3.4` reutiliza sin cambios el ejecutable de inicio de Electron de `0.3.1`. Las propiedades del archivo `.exe` en Windows pueden seguir mostrando `0.3.1`; las versiones de la aplicación y del instalador son `0.3.4`.
 
 El instalador incluye el entorno de ejecución de escritorio. No necesitas instalar Node.js, Python ni herramientas de desarrollo para usar la aplicación. La instalación se limita al usuario actual de Windows. Puedes elegir otra carpeta de instalación si tienes permiso de escritura en ella. El instalador crea accesos directos en el escritorio y el menú Inicio, además de una entrada para desinstalar la aplicación desde Aplicaciones instaladas de Windows. La ubicación predeterminada no requiere permisos de administrador.
 
 **La distribución actual no tiene firma de código.** Windows SmartScreen o el navegador pueden mostrar avisos como “Editor desconocido” o “Windows protegió su PC”. Estos avisos no tienen relación con la instalación de Node.js o Python. Antes de continuar, comprueba la procedencia del archivo. La firma de código y la reputación del editor son tareas pendientes para futuras versiones; no se debe pedir a los usuarios que desactiven las protecciones del sistema.
 
 Encontrarás todos los pasos para el primer uso en la [Guía de inicio rápido (en chino)](docs/QUICKSTART.zh-CN.md).
+
+**Actualizar desde una versión anterior:** cierra Jiao_Reader y ejecuta el nuevo Setup conservando la misma carpeta de instalación. No necesitas desinstalar primero. Se conservan las lecturas recientes, las prioridades, las notas guardadas y el modelo seleccionado; Ollama y los PDF originales no se modifican. No hay actualización automática. Para actualizar una versión portátil, sustituye la carpeta completa de la aplicación; Setup no actualiza una copia portátil situada en otro lugar.
 
 ## Preparar la traducción local
 
@@ -58,10 +60,23 @@ El espacio en disco, la memoria RAM y la memoria gráfica necesarios dependen de
 | Copiar la traducción | Utiliza el botón de copia de la ventana emergente o de la tarjeta de traducción del panel derecho |
 | Cambiar de modelo | Actualiza la lista y selecciona un modelo instalado en el equipo |
 | Gestionar lecturas recientes | Elimina una entrada con su botón de eliminación o pulsa “清空” (Vaciar) para quitar todas; se conservan los PDF originales |
+| Ajustar la prioridad de lectura | Haz clic derecho en una lectura reciente y elige “优先级 +1” (Aumentar prioridad en 1) o “优先级清零” (Poner a cero); el indicador de la entrada muestra la prioridad |
+| Añadir etiquetas o notas | Selecciona texto y haz clic derecho en su entrada de “本次阅读” (Sesión de lectura), abajo a la derecha; elige “添加标签” (Añadir etiquetas) o “写评论 / 笔记” (Escribir comentario / nota) |
+| Consultar anotaciones guardadas | Pulsa “标签与笔记” (Etiquetas y notas), a la derecha del título del documento y a la izquierda del control de páginas; puedes ir a la página, editar o borrar una nota |
 
 La selección al arrastrar gestiona mejor los espacios entre líneas, los márgenes y el texto en dos columnas, y reduce las ampliaciones repentinas de la selección o los saltos al final de la página. Cuando las columnas se detectan con claridad, cada selección se mantiene en la columna inicial; inicia otra selección para traducir la otra columna. Si el documento tiene una disposición compleja, comprueba que el texto original del panel derecho coincida con lo que querías seleccionar. Eliminar entradas de las lecturas recientes solo modifica la lista: no borra los PDF del disco ni cierra el artículo que tienes abierto.
 
-Los archivos PDF se leen en el equipo. El texto seleccionado se envía al servicio local `127.0.0.1:11434`. Los PDF deben tener una capa de texto extraíble; los documentos escaneados requieren OCR previo. El tamaño máximo de cada PDF es de 200 MB y cada traducción admite hasta 3000 caracteres. El historial de traducciones solo se conserva durante la sesión actual de la aplicación.
+Las lecturas recientes se ordenan por **prioridad de mayor a menor y después por fecha de lectura, de más reciente a más antigua**. El menú del clic derecho solo ofrece aumentar la prioridad o ponerla a cero. Las prioridades se guardan en el equipo junto con las lecturas recientes.
+
+Las etiquetas, los comentarios, las notas y las anotaciones no necesitan Ollama. Cada selección de texto crea una entrada de lectura con el original y su página, por lo que puedes anotarla antes de traducir. Separa las etiquetas con comas; puedes editar juntas las etiquetas y la nota de una misma selección. La lista superior muestra primero las notas actualizadas más recientemente, con el fragmento citado y el número de página.
+
+Las etiquetas ofrecen seis colores suaves de resaltador: amarillo trigo, verde salvia, azul bruma, lavanda, albaricoque y coral suave. Elige un color para cada etiqueta en el editor; se resaltan las etiquetas guardadas y sus fragmentos en el PDF. Un fragmento con varias etiquetas utiliza el color de la primera. Las notas que solo contienen un comentario también pueden tener color. Dentro de un documento, una misma etiqueta tiene un color uniforme; cambiarlo actualiza los fragmentos relacionados.
+
+Pulsa una etiqueta sobre la lista para reunir sus fragmentos y notas. Cada fragmento conserva su propio comentario, ordenado por su última modificación; los comentarios no se sobrescriben. Elige “全部” (Todas) para volver a la lista completa. Las anotaciones nuevas guardan su posición en la página, por lo que el resaltado se conserva al ampliar y reiniciar. Las anotaciones antiguas solo se resaltan cuando su cita coincide de forma única. El resaltado se guarda en el lector y no se escribe en el PDF.
+
+Las anotaciones se guardan en el equipo y se conservan al reiniciar. Un PDF copiado o renombrado con exactamente el mismo contenido mantiene las mismas anotaciones. Las notas no se escriben en el PDF ni lo modifican. Las selecciones y traducciones de la sesión son **registros temporales del documento abierto** y se borran al cambiar de documento o reiniciar; las etiquetas y notas guardadas se conservan de forma independiente.
+
+Los archivos PDF se leen en el equipo. Al traducir, el texto seleccionado se envía al servicio local `127.0.0.1:11434`. Los PDF deben tener una capa de texto extraíble; los documentos escaneados requieren OCR previo. El tamaño máximo de cada PDF es de 200 MB y cada traducción admite hasta 3000 caracteres. Cada anotación puede citar hasta 12 000 caracteres e incluir hasta 20 etiquetas (50 caracteres cada una) y una nota de 6000 caracteres.
 
 ## Desarrollo y empaquetado
 
@@ -81,7 +96,7 @@ Para generar un instalador distribuible:
 npm run build:win
 ```
 
-Resultado: `release\Jiao_Reader-Setup-0.3.2.exe`. Basta con compartir este único instalador con otros lectores. No necesitas enviar `node_modules`, el código fuente, la carpeta de compilación de la aplicación ni tus archivos de modelos de Ollama.
+Resultado: `release\Jiao_Reader-Setup-0.3.4.exe`. Basta con compartir este único instalador con otros lectores. No necesitas enviar `node_modules`, el código fuente, la carpeta de compilación de la aplicación ni tus archivos de modelos de Ollama.
 
 Para generar únicamente la carpeta de la aplicación `dist\Jiao_Reader-win32-x64` y validarla:
 
@@ -109,6 +124,7 @@ Sube el código fuente al repositorio de GitHub. Adjunta el instalador Setup y `
 
 ```text
 main.cjs                      Proceso principal de Electron, ventana, operaciones con PDF y API de escritorio
+reading-store.cjs             Lecturas recientes, prioridades y anotaciones locales vinculadas al contenido del PDF
 ollama.cjs                    Detección de Ollama, lista de modelos y traducción local
 preload.cjs                   API de escritorio restringida disponible para la página
 app/                          Interfaz de lectura, renderizado de PDF y módulos de interacción

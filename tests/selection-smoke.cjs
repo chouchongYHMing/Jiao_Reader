@@ -13,6 +13,7 @@ const LINES = {
   footer: 'FOOTER MUST NOT ENTER A SHORT SELECTION.'
 };
 const normalize = value => value.replace(/\s+/g, ' ').trim();
+let lastDragDetails = null;
 
 // The visual left-column lines are adjacent, but PDF operators deliberately put
 // the footer and right column between them. This is a real PDF text-order case.
@@ -70,6 +71,8 @@ async function prepare(page, bytes) {
     window.getSelection().removeAllRanges();
     document.getElementById('readerScroll').scrollTop = 0;
     window.selectionSmokeDragEvents = [];
+    window.selectionSmokePointerEvents = [];
+    window.selectionSmokeSelectionEvents = [];
   });
 }
 
@@ -77,7 +80,19 @@ async function lineBox(page, text) {
   const span = page.locator('[data-page="1"] .pdf-page.rendered .textLayer span').filter({ hasText: text }).first();
   const rect = await span.boundingBox();
   assert.ok(rect && rect.width > 30 && rect.height > 3, `Missing rendered line: ${text}`);
-  return { ...rect, left: rect.x, right: rect.x + rect.width, centerY: rect.y + rect.height / 2, bottom: rect.y + rect.height };
+  const diagnostic = await span.evaluate(span => {
+    const style = getComputedStyle(span);
+    const range = document.createRange();
+    range.selectNodeContents(span);
+    return {
+      text: span.textContent, glyphRect: range.getBoundingClientRect().toJSON(),
+      font: style.font, transform: style.transform, visibility: style.visibility,
+      layerRect: span.closest('.textLayer').getBoundingClientRect().toJSON(),
+      scrollTop: document.getElementById('readerScroll').scrollTop,
+      zoom: document.getElementById('zoomValue').textContent
+    };
+  });
+  return { ...rect, left: rect.x, right: rect.x + rect.width, centerY: rect.y + rect.height / 2, bottom: rect.y + rect.height, diagnostic };
 }
 
 async function snapshot(page, app) {
@@ -85,12 +100,16 @@ async function snapshot(page, app) {
     const selection = window.getSelection();
     const reader = document.getElementById('readerScroll');
     return {
+      at: performance.now(),
       selection: selection?.toString() || '',
       source: document.getElementById('sourceText').textContent,
       scrollTop: reader.scrollTop,
       currentPage: document.getElementById('pageInput').value,
       windowY: window.scrollY,
       dragEvents: window.selectionSmokeDragEvents || [],
+      pointerEvents: window.selectionSmokePointerEvents || [],
+      selectionEvents: window.selectionSmokeSelectionEvents || [],
+      selectionState: window.selectionSmokeDescribe?.(),
       dropVisible: !document.getElementById('dropOverlay').hidden
     };
   });
@@ -99,6 +118,7 @@ async function snapshot(page, app) {
 
 async function drag(page, app, start, end, options = {}) {
   const before = await snapshot(page, app);
+  lastDragDetails = { start, end, before, held: null, after: null };
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   try {
@@ -106,14 +126,18 @@ async function drag(page, app, start, end, options = {}) {
     // Longer than the selection debounce: pointer-down text must not translate.
     await page.waitForTimeout(450);
     const held = await snapshot(page, app);
+    lastDragDetails.held = held;
     assert.equal(held.calls.length, before.calls.length, 'Translation must wait for pointer release');
     assert.equal(await page.locator('#translationBubble').isVisible(), false, 'Pointer-down must not open a translation bubble');
     if (options.held) options.held(held);
   } finally {
     await page.mouse.up();
   }
-  await page.waitForTimeout(450);
-  return { before, after: await snapshot(page, app) };
+  // A native selectionchange after mouseup can replace the 80ms release timer
+  // with the 500ms selection debounce. Wait for the actual source capture.
+  await page.waitForFunction(() => !document.getElementById('sourceText').classList.contains('placeholder'), null, { timeout: 2000 });
+  lastDragDetails.after = await snapshot(page, app);
+  return lastDragDetails;
 }
 
 function assertLocalSelection(result, expected) {
@@ -157,6 +181,15 @@ function assertLocalSelection(result, expected) {
       ipcMain.handle('reader:translate', (_, text) => { globalThis.selectionSmokeCalls.push(text); return '测试译文。'; });
     });
     const page = await app.firstWindow();
+    const isolation = await app.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0];
+      if (!window) throw new Error('The isolated selection window was not created');
+      window.webContents.setBackgroundThrottling(false);
+      window.hide();
+      return { visible: window.isVisible(), backgroundThrottling: window.webContents.getBackgroundThrottling() };
+    });
+    assert.deepEqual(isolation, { visible: false, backgroundThrottling: false }, 'Hide only the disposable test window to prevent physical Windows mouse events mixing with CDP input');
+    console.log(JSON.stringify({ phase: 'input-isolated', ...isolation }));
     page.on('pageerror', error => errors.push(error.message));
     page.on('crash', () => console.error(JSON.stringify({ phase: 'renderer-crashed' })));
     app.process().on('exit', (code, signal) => console.error(JSON.stringify({ phase: 'electron-exited', code, signal })));
@@ -165,6 +198,49 @@ function assertLocalSelection(result, expected) {
     await page.locator('#refreshStatus').click();
     await page.waitForFunction(() => !document.getElementById('refreshStatus').disabled && document.querySelector('#modelStatus strong').textContent.includes('已就绪'));
     await page.evaluate(() => {
+      const nodeInfo = node => {
+        const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+        const span = element?.closest?.('.textLayer span');
+        const layer = element?.closest?.('.textLayer');
+        return {
+          nodeType: node?.nodeType, tag: element?.tagName, id: element?.id || '',
+          className: typeof element?.className === 'string' ? element.className : '',
+          text: (node?.textContent || '').slice(0, 90), column: span?.dataset.selectionColumn || '',
+          page: element?.closest?.('[data-page]')?.dataset.page || '',
+          visibility: layer ? getComputedStyle(layer).visibility : '',
+          rect: span?.getBoundingClientRect().toJSON()
+        };
+      };
+      window.selectionSmokeDescribe = () => {
+        const selection = window.getSelection();
+        const reader = document.getElementById('readerScroll');
+        return {
+          text: selection?.toString() || '', anchor: nodeInfo(selection?.anchorNode), anchorOffset: selection?.anchorOffset,
+          focus: nodeInfo(selection?.focusNode), focusOffset: selection?.focusOffset,
+          scrollTop: reader.scrollTop, scrollLeft: reader.scrollLeft,
+          zoom: document.getElementById('zoomValue').textContent,
+          readerRect: reader.getBoundingClientRect().toJSON()
+        };
+      };
+      for (const type of ['pointerdown', 'pointermove', 'pointerup', 'mousedown', 'mousemove', 'mouseup']) {
+        for (const capture of [true, false]) document.addEventListener(type, event => {
+          if (!window.selectionSmokePointerEvents) return;
+          const trace = {
+            type, phase: capture ? 'capture' : 'bubble', at: performance.now(),
+            x: event.clientX, y: event.clientY, button: event.button, buttons: event.buttons,
+            pointerId: event.pointerId, detail: event.detail, target: nodeInfo(event.target),
+            hit: nodeInfo(document.elementFromPoint(event.clientX, event.clientY)),
+            state: window.selectionSmokeDescribe()
+          };
+          window.selectionSmokePointerEvents.push(trace);
+          if (window.selectionSmokePointerEvents.length > 250) window.selectionSmokePointerEvents.shift();
+        }, capture);
+      }
+      document.addEventListener('selectionchange', () => {
+        if (!window.selectionSmokeSelectionEvents) return;
+        window.selectionSmokeSelectionEvents.push({ at: performance.now(), state: window.selectionSmokeDescribe() });
+        if (window.selectionSmokeSelectionEvents.length > 120) window.selectionSmokeSelectionEvents.shift();
+      });
       document.addEventListener('dragstart', event => {
         queueMicrotask(() => window.selectionSmokeDragEvents.push({ defaultPrevented: event.defaultPrevented, type: event.target?.tagName || '' }));
       });
@@ -172,6 +248,7 @@ function assertLocalSelection(result, expected) {
     const run = async (name, action) => {
       if (filter && !filter.includes(name)) return;
       console.log(JSON.stringify({ phase: 'case', name }));
+      lastDragDetails = null;
       try {
         await prepare(page, fixture);
         const geometry = await page.evaluate(() => {
@@ -194,7 +271,7 @@ function assertLocalSelection(result, expected) {
         if (page.isClosed()) throw error;
         const details = await snapshot(page, app);
         const { calls, ...browser } = details;
-        results.push({ name, passed: false, error: error.message, ...browser, translationCallCount: calls.length, lastTranslatedText: calls.at(-1) });
+        results.push({ name, passed: false, error: error.message, gesture: lastDragDetails, ...browser, translationCallCount: calls.length, lastTranslatedText: calls.at(-1) });
         saveProgress();
         await page.screenshot({ path: path.join(output, `${label}-${name}.png`), timeout: 3000 }).catch(() => {});
       }

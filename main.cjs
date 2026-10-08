@@ -5,52 +5,15 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { createOllamaService } = require('./ollama.cjs');
+const { createReadingStore } = require('./reading-store.cjs');
 
 const MAX_PDF_BYTES = 200 * 1024 * 1024;
 const READER_URL = pathToFileURL(path.join(__dirname, 'app', 'index.html')).href;
 let mainWindow;
 let ollama;
-let recentWriteQueue = Promise.resolve();
+let readingStore;
 
 app.setAppUserModelId('com.jiao.reader');
-
-function preferencesPath() {
-  return path.join(app.getPath('userData'), 'recent.json');
-}
-
-async function readRecentEntries() {
-  try {
-    const entries = JSON.parse(await fs.readFile(preferencesPath(), 'utf8'));
-    return Array.isArray(entries) ? entries.filter(entry => typeof entry === 'string').slice(0, 8) : [];
-  } catch {
-    return [];
-  }
-}
-
-async function getRecent() {
-  await recentWriteQueue;
-  return readRecentEntries();
-}
-
-function recentList(entries) {
-  return entries.map(entry => ({ path: entry, name: path.basename(entry) }));
-}
-
-function updateRecent(changeEntries) {
-  const operation = recentWriteQueue.then(async () => {
-    const next = changeEntries(await readRecentEntries());
-    await fs.mkdir(app.getPath('userData'), { recursive: true });
-    await fs.writeFile(preferencesPath(), JSON.stringify(next), 'utf8');
-    return recentList(next);
-  });
-  // A failed write must not prevent later updates from being attempted.
-  recentWriteQueue = operation.catch(() => {});
-  return operation;
-}
-
-function remember(filePath) {
-  return updateRecent(entries => [filePath, ...entries.filter(entry => entry !== filePath)].slice(0, 8));
-}
 
 async function readPdf(filePath) {
   if (path.extname(filePath).toLowerCase() !== '.pdf') throw new Error('只能打开 PDF 文件。');
@@ -73,20 +36,37 @@ function trusted(event) {
 function registerIpc() {
   ipcMain.handle('reader:recent', async event => {
     if (!trusted(event)) throw new Error('无效请求');
-    return recentList(await getRecent());
+    return readingStore.recent();
   });
 
   ipcMain.handle('reader:remove-recent', async (event, filePath) => {
     if (!trusted(event)) throw new Error('无效请求');
-    if (typeof filePath !== 'string' || !filePath.trim() || filePath.length > 32768 || filePath.includes('\0')) {
-      throw new Error('无效文件路径。');
-    }
-    return updateRecent(entries => entries.filter(entry => entry !== filePath));
+    return readingStore.removeRecent(filePath);
   });
 
   ipcMain.handle('reader:clear-recent', async event => {
     if (!trusted(event)) throw new Error('无效请求');
-    return updateRecent(() => []);
+    return readingStore.clearRecent();
+  });
+
+  ipcMain.handle('reader:set-recent-priority', async (event, filePath, action) => {
+    if (!trusted(event)) throw new Error('无效请求');
+    return readingStore.setRecentPriority(filePath, action);
+  });
+
+  ipcMain.handle('reader:annotations', async (event, documentId) => {
+    if (!trusted(event)) throw new Error('无效请求');
+    return readingStore.annotations(documentId);
+  });
+
+  ipcMain.handle('reader:save-annotation', async (event, documentId, annotation) => {
+    if (!trusted(event)) throw new Error('无效请求');
+    return readingStore.saveAnnotation(documentId, annotation);
+  });
+
+  ipcMain.handle('reader:remove-annotation', async (event, documentId, annotationId) => {
+    if (!trusted(event)) throw new Error('无效请求');
+    return readingStore.removeAnnotation(documentId, annotationId);
   });
 
   ipcMain.handle('reader:open', async event => {
@@ -98,16 +78,16 @@ function registerIpc() {
     });
     if (choice.canceled || !choice.filePaths.length) return null;
     const result = await readPdf(choice.filePaths[0]);
-    result.recent = await remember(choice.filePaths[0]);
+    result.recent = await readingStore.remember(choice.filePaths[0]);
     return result;
   });
 
   ipcMain.handle('reader:open-recent', async (event, filePath) => {
     if (!trusted(event)) throw new Error('无效请求');
-    const entries = await getRecent();
-    if (typeof filePath !== 'string' || !entries.includes(filePath)) throw new Error('文件不在最近阅读记录中。');
+    const entries = await readingStore.recent();
+    if (typeof filePath !== 'string' || !entries.some(entry => entry.path === filePath)) throw new Error('文件不在最近阅读记录中。');
     const result = await readPdf(filePath);
-    result.recent = await remember(filePath);
+    result.recent = await readingStore.remember(filePath);
     return result;
   });
 
@@ -161,6 +141,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  readingStore = createReadingStore({ directory: app.getPath('userData'), fs });
   ollama = createOllamaService({ settingsPath: path.join(app.getPath('userData'), 'settings.json') });
   registerIpc();
   createWindow();

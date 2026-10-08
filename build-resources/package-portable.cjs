@@ -7,7 +7,7 @@ async function packagePortable() {
   const { packager } = await import('@electron/packager');
   const projectRoot = path.resolve(__dirname, '..');
   const readmeFiles = ['README.md', 'README.en.md', 'README.ca.md', 'README.es.md'];
-  const rootFiles = new Set(['main.cjs', 'preload.cjs', 'ollama.cjs', 'package.json', 'LICENSE', ...readmeFiles]);
+  const rootFiles = new Set(['main.cjs', 'preload.cjs', 'ollama.cjs', 'reading-store.cjs', 'package.json', 'LICENSE', ...readmeFiles]);
   const output = await packager({
     dir: projectRoot,
     name: 'Jiao_Reader',

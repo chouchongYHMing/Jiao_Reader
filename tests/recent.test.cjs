@@ -67,6 +67,7 @@ async function readerHarness(directory, { delayWrites = false, failFirstWrite = 
       if (moduleName === 'electron') return electron;
       if (moduleName === 'node:fs/promises') return mockFs;
       if (moduleName === './ollama.cjs') return { createOllamaService: () => ({}) };
+      if (moduleName === './reading-store.cjs') return require('../reading-store.cjs');
       return require(moduleName);
     },
     __dirname: projectDirectory,
@@ -170,7 +171,25 @@ test('a failed disk write does not block the next recent mutation', async t => {
   assert.deepEqual(await reader.readPersisted(), [second]);
 });
 
-test('preload exposes only the expected recent deletion IPC methods', async () => {
+test('new reading IPC methods reject untrusted frames before touching storage', async t => {
+  const { directory, first } = await fixture(t);
+  const reader = await readerHarness(directory);
+  await reader.open(first);
+  const doc = 'a'.repeat(64);
+  const note = { page: 1, source: 'Selected sentence', tags: ['method'], comment: '' };
+  for (const [channel, args] of [
+    ['reader:set-recent-priority', [first, 'increment']],
+    ['reader:annotations', [doc]],
+    ['reader:save-annotation', [doc, note]],
+    ['reader:remove-annotation', [doc, 'bb3192d8-0e93-45b3-bd4b-2fbfa660e6c7']]
+  ]) await assert.rejects(reader.invokeUntrusted(channel, ...args), /无效请求/);
+  assert.equal((await reader.invoke('reader:set-recent-priority', first, 'increment'))[0].priority, 1);
+  const saved = await reader.invoke('reader:save-annotation', doc, note);
+  assert.equal((await reader.invoke('reader:annotations', doc))[0].id, saved.id);
+  assert.equal((await reader.invoke('reader:remove-annotation', doc, saved.id)).length, 0);
+});
+
+test('preload exposes the expected reading storage IPC methods', async () => {
   let exposed;
   const calls = [];
   vm.runInNewContext(await fs.readFile(path.join(projectDirectory, 'preload.cjs'), 'utf8'), {
@@ -184,5 +203,15 @@ test('preload exposes only the expected recent deletion IPC methods', async () =
   });
   await exposed.removeRecent('paper.pdf');
   await exposed.clearRecent();
-  assert.deepEqual(calls, [['reader:remove-recent', 'paper.pdf'], ['reader:clear-recent']]);
+  await exposed.setRecentPriority('paper.pdf', 'reset');
+  await exposed.annotations('document-id');
+  const note = { page: 1, source: 'Selected sentence', tags: ['method'], comment: '' };
+  await exposed.saveAnnotation('document-id', note);
+  await exposed.removeAnnotation('document-id', 'note-id');
+  assert.deepEqual(calls, [
+    ['reader:remove-recent', 'paper.pdf'], ['reader:clear-recent'],
+    ['reader:set-recent-priority', 'paper.pdf', 'reset'],
+    ['reader:annotations', 'document-id'], ['reader:save-annotation', 'document-id', note],
+    ['reader:remove-annotation', 'document-id', 'note-id']
+  ]);
 });

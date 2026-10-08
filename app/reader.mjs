@@ -1,5 +1,9 @@
 import { PdfReader } from './pdf-reader.mjs';
 import { TranslationBubble } from './translation-bubble.mjs';
+import { ContextMenu } from './context-menu.mjs';
+import { AnnotationPanel } from './annotations.mjs';
+import { PdfHighlights, capturePageRects } from './pdf-highlights.mjs';
+import { applyColor, colorForTag } from './annotation-colors.mjs';
 
 const $ = id => document.getElementById(id);
 const ui = Object.fromEntries([
@@ -7,13 +11,17 @@ const ui = Object.fromEntries([
   'pageReadout', 'zoomOut', 'zoomIn', 'zoomValue', 'fitButton', 'readerScroll', 'emptyState', 'pdfStage',
   'pages', 'toast', 'recentList', 'recentCount', 'clearRecent', 'modelStatus', 'refreshStatus', 'modelSelect', 'modelHint',
   'startOllama', 'modelGuide', 'modelCommand', 'copyCommand', 'sourceText', 'selectionLength',
-  'translationText', 'copyButton', 'retryTranslation', 'ollamaLink', 'historyList', 'historyCount', 'dropOverlay'
+  'translationText', 'copyButton', 'retryTranslation', 'ollamaLink', 'historyList', 'historyCount', 'dropOverlay', 'annotationsButton'
 ].map(id => [id, $(id)]));
 
 let fileName = '';
 let filePath = '';
+let documentId = '';
+let currentSelection = null;
+let selectionSerial = 0;
 let recentBusy = false;
 let openSerial = 0;
+let openRequestSerial = 0;
 let translationSerial = 0;
 let statusSerial = 0;
 let selectedText = '';
@@ -23,7 +31,7 @@ let selectedModel = '';
 let modelReady = false;
 let translating = false;
 let translationInFlight = false;
-let pendingTranslation = '';
+let pendingTranslation = null;
 let modelChecking = false;
 let selectionTimer;
 let selectingPdf = false;
@@ -31,6 +39,15 @@ let toastTimer;
 let recent = [];
 const history = [];
 const bubble = new TranslationBubble(ui.readerScroll, text => copyText(text, '译文已复制'), dismissBubble);
+const contextMenu = new ContextMenu();
+let highlights;
+const annotations = new AnnotationPanel({
+  button: ui.annotationsButton,
+  container: document.body,
+  onNavigate: page => { dismissBubble(); reader.goToPage(page); },
+  onToast: showToast,
+  onChange: notes => { highlights?.setNotes(notes); renderHistory(); }
+});
 
 const reader = new PdfReader(ui.readerScroll, ui.pages, state => {
   ui.pageInput.disabled = !state.ready;
@@ -44,7 +61,9 @@ const reader = new PdfReader(ui.readerScroll, ui.pages, state => {
   ui.zoomIn.disabled = !state.ready || state.scale >= 2.6;
   ui.fitButton.disabled = !state.ready;
   ui.zoomValue.textContent = `${Math.round(state.scale * 100)}%`;
-});
+  ui.annotationsButton.disabled = !state.ready || !documentId;
+}, record => highlights?.render(record));
+highlights = new PdfHighlights(reader);
 
 function showToast(message) {
   ui.toast.textContent = message;
@@ -77,7 +96,7 @@ function updateTranslationButton() {
 function resetTranslation() {
   dismissBubble();
   translationSerial++;
-  pendingTranslation = '';
+  pendingTranslation = null;
   selectedText = '';
   translation = '';
   translating = false;
@@ -110,13 +129,32 @@ function renderRecent() {
     icon.textContent = 'PDF';
     const name = document.createElement('span');
     name.textContent = item.name;
+    name.className = 'recent-name';
     button.append(icon, name);
+    if (item.priority > 0) {
+      const priority = document.createElement('span');
+      priority.className = 'recent-priority';
+      priority.textContent = `↑${item.priority}`;
+      priority.title = `优先级 ${item.priority}`;
+      priority.setAttribute('aria-label', `优先级 ${item.priority}`);
+      button.append(priority);
+    }
+    row.dataset.priority = String(item.priority || 0);
+    row.addEventListener('contextmenu', event => {
+      dismissBubble();
+      contextMenu.open(event, [
+        { label: '优先级 +1', disabled: recentBusy, action: () => changePriority(item.path, 'increment') },
+        { label: '优先级清零', disabled: recentBusy, action: () => changePriority(item.path, 'reset') }
+      ]);
+    });
     button.addEventListener('click', async () => {
+      const request = ++openRequestSerial;
       try {
         const result = await window.jiao.openRecent(item.path);
+        if (request !== openRequestSerial) return;
         recent = result.recent;
         await openPdf(result.name, result.data, result.path);
-      } catch (error) { showToast(`打开失败：${error.message}`); }
+      } catch (error) { if (request === openRequestSerial) showToast(`打开失败：${error.message}`); }
     });
     const remove = document.createElement('button');
     remove.type = 'button';
@@ -142,13 +180,25 @@ async function changeRecent(action, path) {
   finally { recentBusy = false; renderRecent(); }
 }
 
+async function changePriority(path, action) {
+  if (recentBusy) return;
+  recentBusy = true;
+  renderRecent();
+  try {
+    recent = await window.jiao.setRecentPriority(path, action);
+    showToast(action === 'reset' ? '优先级已清零。' : '优先级已增加。');
+  } catch (error) { showToast(`设置优先级失败：${error.message}`); }
+  finally { recentBusy = false; renderRecent(); }
+}
+
 async function choosePdf() {
+  const request = ++openRequestSerial;
   try {
     const result = await window.jiao.open();
-    if (!result) return;
+    if (!result || request !== openRequestSerial) return;
     recent = result.recent;
     await openPdf(result.name, result.data, result.path);
-  } catch (error) { showToast(`打开失败：${error.message}`); }
+  } catch (error) { if (request === openRequestSerial) showToast(`打开失败：${error.message}`); }
 }
 
 async function openDroppedPdf(file) {
@@ -156,28 +206,47 @@ async function openDroppedPdf(file) {
     showToast('请拖入不超过 200 MB 的 PDF 文件。');
     return;
   }
+  const request = ++openRequestSerial;
   try {
     const data = new Uint8Array(await file.arrayBuffer());
+    if (request !== openRequestSerial) return;
     if (new TextDecoder('ascii').decode(data.subarray(0, 5)) !== '%PDF-') throw new Error('文件不是有效的 PDF。');
     await openPdf(file.name, data);
-  } catch (error) { showToast(`打开失败：${error.message}`); }
+  } catch (error) { if (request === openRequestSerial) showToast(`打开失败：${error.message}`); }
 }
 
 async function openPdf(name, bytes, path = '') {
   const serial = ++openSerial;
   resetTranslation();
+  contextMenu.close();
+  currentSelection = null;
+  history.length = 0;
+  documentId = '';
+  annotations.setDocument('', '');
+  renderHistory();
   fileName = name;
   filePath = path;
   ui.documentName.textContent = name;
   ui.documentName.title = name;
   ui.emptyState.hidden = true;
-  ui.pdfStage.hidden = false;
+  ui.pdfStage.hidden = true;
+  reader.ready = false;
+  reader.notify();
   renderRecent();
   showToast(`正在打开 ${name}`);
   try {
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    if (serial !== openSerial) return;
+    documentId = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('');
+    await annotations.setDocument(documentId, name);
+    if (serial !== openSerial) return;
+    ui.annotationsButton.disabled = true;
+    ui.pdfStage.hidden = false;
     if (await reader.open(bytes) && serial === openSerial) showToast(`${name} · ${reader.totalPages} 页`);
   } catch (error) {
     if (serial !== openSerial) return;
+    documentId = '';
+    annotations.setDocument('', '');
     ui.emptyState.hidden = false;
     ui.pdfStage.hidden = true;
     showToast(`PDF 打开失败：${error.message}`);
@@ -205,14 +274,36 @@ function handleSelection() {
   const backwards = range.startContainer === selection.focusNode && range.startOffset === selection.focusOffset;
   const rect = backwards ? rects[0] : rects.at(-1);
   const anchor = { left: Math.max(rect.left, viewport.left), top: Math.max(rect.top, viewport.top), bottom: Math.min(rect.bottom, viewport.bottom) };
+  const anchorElement = selection.anchorNode?.nodeType === Node.ELEMENT_NODE ? selection.anchorNode : selection.anchorNode?.parentElement;
+  const page = Number(anchorElement?.closest('[data-page]')?.dataset.page) || reader.currentPage;
+  const body = anchorElement?.closest('.page-shell')?.querySelector('.pdf-page');
+  const item = captureSelection(text, page, capturePageRects(range, body));
   bubble.open(anchor, text, text === selectedText ? ui.translationText.textContent : '正在准备翻译…', text === selectedText ? translationState : 'loading');
-  if (text === selectedText) return;
-  runTranslation(text);
+  if (text === selectedText) {
+    if (translation && item) { item.result = translation; item.model = selectedModel; item.status = 'success'; renderHistory(); }
+    return;
+  }
+  runTranslation(text, item);
 }
 
-async function runTranslation(text) {
+function captureSelection(text, page, rects = []) {
+  if (!documentId || !page) return null;
+  if (currentSelection?.source === text && currentSelection.page === page && currentSelection.documentId === documentId) {
+    if (rects.length) currentSelection.rects = rects;
+    return currentSelection;
+  }
+  if (currentSelection && ['loading', 'waiting'].includes(currentSelection.status)) currentSelection.status = 'skipped';
+  const item = { id: ++selectionSerial, documentId, page, source: text, rects, result: '', model: '', status: 'selected' };
+  history.unshift(item);
+  if (history.length > 20) history.pop();
+  currentSelection = item;
+  renderHistory();
+  return item;
+}
+
+async function runTranslation(text, item = currentSelection) {
   const serial = ++translationSerial;
-  pendingTranslation = '';
+  pendingTranslation = null;
   selectedText = text;
   translation = '';
   ui.copyButton.disabled = true;
@@ -220,22 +311,25 @@ async function runTranslation(text) {
   ui.selectionLength.textContent = `${text.length} / 3000 字`;
   translating = false;
   if (text.length > 3000 || !modelReady || modelChecking) {
+    if (item) { item.status = 'selected'; renderHistory(); }
     showTranslation(text.length > 3000 ? '选中文本过长，请分段翻译。' : modelChecking ? '正在检查或切换模型，请稍后点击“重新翻译”。' : '请先连接 Ollama 并选择一个已安装的模型，然后点击“重新翻译”。', 'error');
     updateTranslationButton();
     return;
   }
   if (translationInFlight) {
-    pendingTranslation = text;
+    pendingTranslation = { text, item };
+    if (item) { item.status = 'waiting'; renderHistory(); }
     translating = true;
     showTranslation('等待当前请求完成后翻译新的选文…', 'loading');
     updateTranslationButton();
     return;
   }
-  pendingTranslation = '';
+  pendingTranslation = null;
   translationInFlight = true;
   translating = true;
   updateTranslationButton();
   const model = selectedModel;
+  if (item) { item.status = 'loading'; renderHistory(); }
   showTranslation(`正在使用 ${model} 翻译…`, 'loading');
   try {
     const result = await window.jiao.translate(text);
@@ -243,18 +337,20 @@ async function runTranslation(text) {
     translation = result;
     showTranslation(result, 'success');
     ui.copyButton.disabled = false;
-    history.unshift({ source: text, result, model });
-    if (history.length > 20) history.pop();
+    if (item?.documentId === documentId) { item.result = result; item.model = model; item.status = 'success'; }
     renderHistory();
   } catch (error) {
-    if (serial === translationSerial) showTranslation(`翻译失败：${error.message}`, 'error');
+    if (serial === translationSerial) {
+      if (item) { item.status = 'failed'; renderHistory(); }
+      showTranslation(`翻译失败：${error.message}`, 'error');
+    }
   } finally {
     translationInFlight = false;
     if (serial === translationSerial) { translating = false; updateTranslationButton(); }
     if (pendingTranslation) {
       const next = pendingTranslation;
-      pendingTranslation = '';
-      runTranslation(next);
+      pendingTranslation = null;
+      runTranslation(next.text, next.item);
     } else updateTranslationButton();
   }
 }
@@ -262,32 +358,80 @@ async function runTranslation(text) {
 function renderHistory() {
   ui.historyCount.textContent = String(history.length);
   ui.historyList.replaceChildren();
+  if (!history.length) {
+    const hint = document.createElement('p');
+    hint.className = 'hint';
+    hint.textContent = '划选正文后，右键记录可添加标签或笔记。';
+    ui.historyList.append(hint);
+  }
   for (const item of history) {
     const button = document.createElement('button');
     button.className = 'history-item';
     button.type = 'button';
-    button.title = item.model;
+    button.dataset.selectionId = String(item.id);
+    button.dataset.page = String(item.page);
+    button.title = `第 ${item.page} 页 · 右键添加标签或笔记${item.model ? ` · ${item.model}` : ''}`;
     const source = document.createElement('strong');
     source.textContent = item.source;
     const result = document.createElement('span');
-    result.textContent = item.result;
+    result.textContent = item.result || `第 ${item.page} 页 · ${item.status === 'loading' ? '翻译中…' : item.status === 'waiting' ? '等待翻译…' : item.status === 'failed' ? '翻译失败，可重试或标注' : '右键添加标签或笔记'}`;
     button.append(source, result);
+    const note = annotations.getAnnotation(item.page, item.source);
+    if (note) {
+      const mark = document.createElement('span');
+      mark.className = 'history-note-mark';
+      for (const tag of note.tags) {
+        const chip = document.createElement('span');
+        chip.className = 'annotation-tag';
+        chip.textContent = `#${tag}`;
+        applyColor(chip, colorForTag(note, tag));
+        mark.append(chip);
+      }
+      if (note.comment) {
+        const comment = document.createElement('span');
+        comment.className = 'history-comment-mark';
+        comment.textContent = '有笔记';
+        mark.append(comment);
+      }
+      button.append(mark);
+    }
+    button.addEventListener('contextmenu', event => showSelectionMenu(event, item));
     button.addEventListener('click', () => {
       dismissBubble();
       translationSerial++;
-      pendingTranslation = '';
+      pendingTranslation = null;
+      skipUnfinishedHistory();
       translating = false;
       selectedText = item.source;
+      currentSelection = item;
       translation = item.result;
       setText(ui.sourceText, item.source);
-      showTranslation(item.result, 'success');
+      showTranslation(item.result || '选文已恢复，可添加标注或重新翻译。', item.result ? 'success' : 'idle');
       ui.selectionLength.textContent = `${item.source.length} / 3000 字`;
-      ui.copyButton.disabled = false;
+      ui.copyButton.disabled = !item.result;
       updateTranslationButton();
+      renderHistory();
     });
     ui.historyList.append(button);
   }
 }
+
+function skipUnfinishedHistory() {
+  for (const item of history) {
+    if (['loading', 'waiting'].includes(item.status)) item.status = 'skipped';
+  }
+}
+
+function showSelectionMenu(event, item = currentSelection) {
+  if (!item || item.documentId !== documentId) return;
+  dismissBubble();
+  contextMenu.open(event, [
+    { label: '添加标签', action: () => annotations.editSelection(item, 'tags') },
+    { label: '写评论 / 笔记', action: () => annotations.editSelection(item, 'comment') }
+  ]);
+}
+
+ui.historyList.parentElement.addEventListener('contextmenu', event => showSelectionMenu(event));
 
 function applyModelStatus(status) {
   const models = status.models || [];
@@ -296,7 +440,9 @@ function applyModelStatus(status) {
   if (nextModel !== selectedModel) {
     dismissBubble();
     translationSerial++;
-    pendingTranslation = '';
+    pendingTranslation = null;
+    skipUnfinishedHistory();
+    renderHistory();
     translating = false;
     translation = '';
     ui.copyButton.disabled = true;
@@ -401,13 +547,16 @@ document.addEventListener('pointerup', () => {
   if (!selectingPdf) return;
   selectingPdf = false;
   clearTimeout(selectionTimer);
+  // Let native mouse-up finish before placing a bubble over the PDF.
   selectionTimer = setTimeout(handleSelection, 80);
 });
 document.addEventListener('pointercancel', () => { selectingPdf = false; dismissBubble(); });
-ui.readerScroll.addEventListener('scroll', dismissBubble, { passive: true });
+// An edge scroll after pointer release must not discard the pending selection.
+ui.readerScroll.addEventListener('scroll', () => bubble.hide(), { passive: true });
 window.addEventListener('blur', () => { selectingPdf = false; dismissBubble(); });
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape') dismissBubble();
+  if (event.target.closest?.('dialog[open]')) return;
   if (event.ctrlKey && event.key.toLowerCase() === 'o') { event.preventDefault(); dismissBubble(); choosePdf(); }
   if (event.ctrlKey && (event.key === '+' || event.key === '=')) { event.preventDefault(); setReaderScale(reader.scale + 0.1); }
   if (event.ctrlKey && event.key === '-') { event.preventDefault(); setReaderScale(reader.scale - 0.1); }
