@@ -2,7 +2,7 @@
 
 ## 1. 安装阅读器
 
-从项目的 GitHub Releases 页面下载，或接收同学发来的 `Jiao_Reader-Setup-0.3.1.exe`，按向导选择安装位置，完成后从桌面或开始菜单打开。安装包包含软件所需的运行环境，不需要 Node.js 或 Python。Windows 10 / 11 x64 可用。GitHub 自动提供的 `Source code` 是源码，不是安装程序。
+从项目的 GitHub Releases 页面下载，或接收同学发来的 `Jiao_Reader-Setup-0.3.2.exe`，按向导选择安装位置，完成后从桌面或开始菜单打开。安装包包含软件所需的运行环境，不需要 Node.js 或 Python。Windows 10 / 11 x64 可用。GitHub 自动提供的 `Source code` 是源码，不是安装程序。
 
 当前安装包没有代码签名，Windows 可能显示未知发布者或 SmartScreen 提示。请先核对发送者及文件来源，无需关闭系统防护。
 

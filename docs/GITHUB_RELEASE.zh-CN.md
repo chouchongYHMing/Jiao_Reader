@@ -12,7 +12,7 @@
 
 - `app/`、`main.cjs`、`preload.cjs`、`ollama.cjs` 等运行源码。
 - `package.json`、`package-lock.json`、`electron-builder.yml`、`build-resources/` 和 `tests/`。
-- `README.md`、`LICENSE`、`docs/`、`.gitignore` 及应用实际使用的插画、图标和第三方许可证。
+- `README.md`、`LICENSE`、`docs/`、`.gitignore` 及应用实际使用的图标、资源和第三方许可证。
 
 依赖和构建结果留在本机：`node_modules/`、`dist/`、`release/`、`build/`、`backups/` 和测试输出已由 `.gitignore` 排除。自己的论文、模型权重和本机配置也不应上传；放在项目目录外最方便。首次提交前检查 `git status` 中的待提交文件。
 
@@ -26,7 +26,7 @@ git init -b main
 git status --short
 git add .
 git diff --cached --stat
-git commit -m "Release Jiao_Reader 0.3.1"
+git commit -m "Release Jiao_Reader 0.3.2"
 git remote add origin https://github.com/chouchongYHMing/Jiao_Reader.git
 git push -u origin main
 ```
@@ -48,18 +48,20 @@ npm run build:win
 
 | 文件 | 用途 |
 | --- | --- |
-| `release/Jiao_Reader-Setup-0.3.1.exe` | 同学直接下载并安装 |
+| `release/Jiao_Reader-Setup-0.3.2.exe` | 同学直接下载并安装 |
 | `release/SHA256SUMS.txt` | 核对下载文件的 SHA-256 |
-| `Jiao_Reader-Portable-0.3.1-win-x64.zip`（可选） | 不使用安装向导的便携版 |
+| `Jiao_Reader-Portable-0.3.2-win-x64.zip`（可选） | 不使用安装向导的便携版 |
 
 需要便携版时先运行 `npm run package:win`，然后压缩整个 `dist/Jiao_Reader-win32-x64/` 文件夹。单独上传里面的 `Jiao_Reader.exe` 无法运行。
+
+本次 `0.3.2` 发行采用一次资源更新封装：沿用已发行 `0.3.1` 便携版的 Electron 启动程序，更新 `app.asar` 和随包文档，再生成版本为 `0.3.2` 的安装包。Windows 的 `.exe` 文件属性可能仍显示 `0.3.1`，应用读取的版本为 `0.3.2`。启动程序来源、SHA-256 及原生运行时和图标的校验结果记录在 `release/VALIDATION-0.3.2.md`。常规 `npm run build:win` 会重新生成启动程序，不保证其字节与本次发行包的启动程序一致。
 
 后续重新构建安装包时，在 PowerShell 更新校验文件：
 
 ```powershell
-$setupPath = 'release/Jiao_Reader-Setup-0.3.1.exe'
+$setupPath = 'release/Jiao_Reader-Setup-0.3.2.exe'
 $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLowerInvariant()
-"$setupHash  Jiao_Reader-Setup-0.3.1.exe" | Set-Content -LiteralPath 'release/SHA256SUMS.txt' -Encoding ascii
+"$setupHash  Jiao_Reader-Setup-0.3.2.exe" | Set-Content -LiteralPath 'release/SHA256SUMS.txt' -Encoding ascii
 ```
 
 该命令只写安装包的校验值；若另附便携版，可将它的校验值补充到同一文件。
@@ -67,8 +69,8 @@ $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLow
 ## 4. 创建 GitHub Release
 
 1. 确认上传的源码与刚构建的安装包一致，在仓库主页打开 **Releases → Draft a new release**。
-2. 新建标签 `v0.3.1`，Target 选择刚推送的 `main`。
-3. 标题填写 `Jiao_Reader 0.3.1`，填写下面的版本说明。
+2. 新建标签 `v0.3.2`，Target 选择刚推送的 `main`。
+3. 标题填写 `Jiao_Reader 0.3.2`，填写下面的版本说明。
 4. 在附件区域上传 Setup 和 `SHA256SUMS.txt`；便携版 ZIP 可选。
 5. 等待附件上传完成，再点击 **Publish release**。
 
@@ -77,19 +79,19 @@ $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLow
 可直接使用的版本说明：
 
 ```markdown
-## Jiao_Reader 0.3.1
+## Jiao_Reader 0.3.2
 
 - 新增最近阅读的单条删除和清空功能，只移除列表记录，不删除原始 PDF。
 - 优化正文拖选，减少在行间空白和页边距误选大量文字或跳到页尾的问题。
 - 改进双栏正文选取；复杂版式请核对选中的原文，建议一次选择同一栏的一段。
 - 保留划选翻译气泡，右侧同步显示原文与译文。
-- 保留高松灯书桌阅读同人插画。
+- 简化首页，只保留文件打开入口和使用提示；保留应用图标。
 - 支持连续滚动、页码显示与跳转、缩放及适合宽度。
 - 检测本机 Ollama，选择已经安装的本地模型。
 
 ### 安装
 
-Windows 10 / 11 x64：下载下方 Assets 中的 Jiao_Reader-Setup-0.3.1.exe。
+Windows 10 / 11 x64：下载下方 Assets 中的 Jiao_Reader-Setup-0.3.2.exe。
 安装包包含运行环境，不需要 Node.js 或 Python。
 Source code 是源码压缩包，普通使用者无需下载。
 

@@ -6,15 +6,17 @@ Proyecto: [chouchongYHMing/Jiao_Reader](https://github.com/chouchongYHMing/Jiao_
 
 Lector local de artículos académicos en PDF para Windows 10 / 11 x64. Utiliza PDF.js para mostrar los documentos y los modelos que ya tengas instalados en Ollama en tu equipo para traducir el texto seleccionado.
 
-Una herramienta de lectura personal, actualmente en la versión `0.3.1`. La pantalla sin documentos abiertos muestra una ilustración no oficial de Takamatsu Tomori leyendo en su escritorio. Al abrir un artículo, puedes seleccionar texto para ver la traducción en una ventana emergente junto a la selección; el panel derecho conserva el texto original completo y su traducción.
+Una herramienta de lectura personal, actualmente en la versión `0.3.2`. Al abrir un artículo, puedes seleccionar texto para ver la traducción en una ventana emergente junto a la selección; el panel derecho conserva el texto original completo y su traducción.
 
 **La interfaz de la aplicación está actualmente en chino simplificado y el texto seleccionado se traduce al chino simplificado.** Los distintos idiomas de este README no implican que la interfaz de la aplicación esté traducida a esos idiomas.
 
 ## Para lectores: instalar y empezar a leer
 
-1. Descarga `Jiao_Reader-Setup-0.3.1.exe` desde [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) y ejecuta el instalador. Las descargas llamadas `Source code` contienen el código fuente; para utilizar la aplicación, basta con descargar Setup.
+1. Descarga `Jiao_Reader-Setup-0.3.2.exe` desde [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) y ejecuta el instalador. Las descargas llamadas `Source code` contienen el código fuente; para utilizar la aplicación, basta con descargar Setup.
 2. Abre Jiao_Reader desde el escritorio o el menú Inicio y abre un PDF o arrástralo a la ventana.
 3. Utiliza la rueda del ratón para leer de forma continua. La barra superior muestra la página actual y el número total de páginas. Puedes introducir un número de página para ir a ella o ajustar la vista con `+`, `−` y “适合宽度” (Ajustar al ancho).
+
+La versión `0.3.2` reutiliza sin cambios el ejecutable de inicio de Electron de `0.3.1`. Las propiedades del archivo `.exe` en Windows pueden seguir mostrando `0.3.1`; las versiones de la aplicación y del instalador son `0.3.2`.
 
 El instalador incluye el entorno de ejecución de escritorio. No necesitas instalar Node.js, Python ni herramientas de desarrollo para usar la aplicación. La instalación se limita al usuario actual de Windows. Puedes elegir otra carpeta de instalación si tienes permiso de escritura en ella. El instalador crea accesos directos en el escritorio y el menú Inicio, además de una entrada para desinstalar la aplicación desde Aplicaciones instaladas de Windows. La ubicación predeterminada no requiere permisos de administrador.
 
@@ -79,7 +81,7 @@ Para generar un instalador distribuible:
 npm run build:win
 ```
 
-Resultado: `release\Jiao_Reader-Setup-0.3.1.exe`. Basta con compartir este único instalador con otros lectores. No necesitas enviar `node_modules`, el código fuente, la carpeta de compilación de la aplicación ni tus archivos de modelos de Ollama.
+Resultado: `release\Jiao_Reader-Setup-0.3.2.exe`. Basta con compartir este único instalador con otros lectores. No necesitas enviar `node_modules`, el código fuente, la carpeta de compilación de la aplicación ni tus archivos de modelos de Ollama.
 
 Para generar únicamente la carpeta de la aplicación `dist\Jiao_Reader-win32-x64` y validarla:
 

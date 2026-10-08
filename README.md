@@ -6,15 +6,17 @@
 
 面向 Windows 10 / 11 x64 的本地论文 PDF 阅读器。使用 PDF.js 阅读论文，通过本机 Ollama 中已经安装的模型翻译选中的文字。
 
-个人阅读工具，当前版本 `0.3.1`。空白页采用高松灯书桌阅读同人插画；打开论文后，划选文字即可在选区附近的气泡中查看译文，右侧保留完整原文与译文。
+个人阅读工具，当前版本 `0.3.2`。打开论文后，划选文字即可在选区附近的气泡中查看译文，右侧保留完整原文与译文。
 
 应用界面目前为简体中文，默认将选文翻译为简体中文。四种语言的 README 用于介绍项目与使用方法。
 
 ## 给使用者：安装后即可阅读
 
-1. 在 [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) 页面下载 `Jiao_Reader-Setup-0.3.1.exe`，运行并完成安装。`Source code` 是源码压缩包；普通使用者下载 Setup 即可。
+1. 在 [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) 页面下载 `Jiao_Reader-Setup-0.3.2.exe`，运行并完成安装。`Source code` 是源码压缩包；普通使用者下载 Setup 即可。
 2. 从桌面或开始菜单打开 Jiao_Reader，打开或拖入 PDF。
 3. 使用滚轮连续阅读；顶部显示当前页和总页数，可输入页码跳转，或使用 `+`、`−` 和“适合宽度”调整页面。
+
+本次 `0.3.2` 发行包沿用 `0.3.1` 的 Electron 启动程序，因此 Windows 的 `.exe` 文件属性可能仍显示 `0.3.1`；应用和安装包版本为 `0.3.2`。
 
 安装包内已包含桌面运行环境，同学无需安装 Node.js、Python 或开发工具。默认仅安装到当前 Windows 用户，安装目录可改为自己有写权限的目录；开始菜单、桌面快捷方式和 Windows“已安装的应用”卸载入口由安装程序创建。默认目录不需要管理员权限。
 
@@ -79,7 +81,7 @@ npm start
 npm run build:win
 ```
 
-输出：`release\Jiao_Reader-Setup-0.3.1.exe`。把这一个安装文件发给同学即可；无需发送 `node_modules`、源码、应用构建目录或自己的 Ollama 模型文件。
+输出：`release\Jiao_Reader-Setup-0.3.2.exe`。把这一个安装文件发给同学即可；无需发送 `node_modules`、源码、应用构建目录或自己的 Ollama 模型文件。
 
 仅生成待验证的应用目录 `dist\Jiao_Reader-win32-x64`：
 

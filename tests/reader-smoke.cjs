@@ -118,14 +118,13 @@ async function resolveTranslation(app, result) {
   try {
     assert.equal(path.resolve(await app.evaluate(({ app }) => app.getPath('userData'))).toLowerCase(),
       path.resolve(userData).toLowerCase(), 'Reader tests must use isolated preferences');
+    assert.equal(await app.evaluate(({ app }) => app.getVersion()), require('../package.json').version,
+      'Application version must come from the current package');
     const page = await app.firstWindow();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.locator('#emptyOpenButton').waitFor();
-    await page.waitForFunction(() => {
-      const image = document.getElementById('readingIllustration');
-      return image?.complete && image.naturalWidth > 0;
-    });
+    assert.equal(await page.locator('#emptyState img').count(), 0);
     assert.equal(await page.getByText('读懂每一篇论文', { exact: true }).count(), 0);
     await page.screenshot({ path: path.join(output, packaged ? 'packaged-empty.png' : 'empty.png') });
     const live = process.env.JIAO_LIVE_OLLAMA === '1';
@@ -305,6 +304,6 @@ async function resolveTranslation(app, result) {
       assert.equal(lastCalls[1], latestText);
     }
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ passed: true, wheel: 'up/down', rapidZoom: 'page retained', navigation: '1..12', modelStates: live ? 'live Ollama' : 'not-found/stopped/empty/selection', bubble: live ? 'drag/copy/dismiss/reselect' : 'drag/copy/dismiss/reselect/late-result/latest-request/long-text', illustration: 'loaded', translation, rendererErrors: errors }));
+    console.log(JSON.stringify({ passed: true, wheel: 'up/down', rapidZoom: 'page retained', navigation: '1..12', modelStates: live ? 'live Ollama' : 'not-found/stopped/empty/selection', bubble: live ? 'drag/copy/dismiss/reselect' : 'drag/copy/dismiss/reselect/late-result/latest-request/long-text', home: 'file opening and hints', translation, rendererErrors: errors }));
   } finally { await app.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

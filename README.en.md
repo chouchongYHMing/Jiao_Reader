@@ -6,15 +6,17 @@ Project: [chouchongYHMing/Jiao_Reader](https://github.com/chouchongYHMing/Jiao_R
 
 A local PDF reader for academic papers on Windows 10 / 11 x64. It uses PDF.js to display papers and models already installed in your local Ollama instance to translate selected text.
 
-A personal reading tool, currently at version `0.3.1`. The empty screen features fan art of Takamatsu Tomori reading at her desk. Once you open a paper, select text to see its translation in a nearby popup; the right panel keeps the full source text and translation.
+A personal reading tool, currently at version `0.3.2`. Once you open a paper, select text to see its translation in a nearby popup; the right panel keeps the full source text and translation.
 
 **The application interface is currently in Simplified Chinese, and selected text is translated into Simplified Chinese.** These README translations do not indicate that the application has a multilingual interface.
 
 ## For readers: install and start reading
 
-1. Download `Jiao_Reader-Setup-0.3.1.exe` from [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases), then run the installer. The `Source code` downloads contain the source code; to use the application, choose Setup.
+1. Download `Jiao_Reader-Setup-0.3.2.exe` from [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases), then run the installer. The `Source code` downloads contain the source code; to use the application, choose Setup.
 2. Open Jiao_Reader from the desktop or Start menu, then open or drag in a PDF.
 3. Use the mouse wheel to read continuously. The top toolbar shows the current page and total page count. Enter a page number to jump to it, or use `+`, `−`, and “适合宽度” (Fit width) to adjust the view.
+
+The `0.3.2` release reuses the unchanged Electron launcher from `0.3.1`. Windows `.exe` file properties may therefore still show `0.3.1`; the application and installer versions are `0.3.2`.
 
 The installer includes the desktop runtime. Readers do not need to install Node.js, Python, or development tools. Installation is restricted to the current Windows user. You can choose another installation folder if you have permission to write to it. The installer creates Start menu and desktop shortcuts and an uninstall entry in Windows Installed apps. The default installation location does not require administrator privileges.
 
@@ -79,7 +81,7 @@ Build a distributable installer:
 npm run build:win
 ```
 
-Output: `release\Jiao_Reader-Setup-0.3.1.exe`. Share this single installer with other readers. You do not need to send `node_modules`, the source code, the application build folder, or your own Ollama model files.
+Output: `release\Jiao_Reader-Setup-0.3.2.exe`. Share this single installer with other readers. You do not need to send `node_modules`, the source code, the application build folder, or your own Ollama model files.
 
 Build only the application folder `dist\Jiao_Reader-win32-x64` for validation:
 

@@ -5,7 +5,7 @@
 ## 构建与内容
 
 1. 在 Windows x64 上执行 `npm ci`、`npm run check`、`npm test`、`npm run test:reader`、`npm run test:selection`、`npm run test:recent` 和 `npm run build:win`。
-2. 确认 `release/Jiao_Reader-Setup-0.3.1.exe` 存在且版本为 0.3.1。
+2. 确认 `release/Jiao_Reader-Setup-0.3.2.exe` 存在且版本为 0.3.2。
 3. 检查 `dist/Jiao_Reader-win32-x64/resources/app.asar` 包含 `main.cjs`、`preload.cjs`、`ollama.cjs`、完整 `app/` 阅读模块、PDF.js worker、字体和 cmap 资源。安装包直接封装此应用目录；安装后的可执行文件及 app.asar 应与此目录的文件具有相同 SHA-256。
 4. 确认包内没有 `node_modules` 开发依赖、测试、验证输出或维护者本地论文。保留应用目录中 Electron / Chromium 的许可证、`LICENSE.jiao-reader.txt`，以及 `app/pdfjs/` 内的许可证。
 5. `npm run package:win` 应仍生成 `dist/Jiao_Reader-win32-x64/Jiao_Reader.exe`，并可打开 PDF。
@@ -36,7 +36,7 @@
 - 删除或清空最近阅读时，不关闭当前文献，不改变当前阅读页；原始 PDF 仍存在且可重新打开。
 - 输入有效页码能跳转，超出页数或无效输入不会让页面消失。
 - 关闭和重开 PDF、切换到另一篇 PDF 后，页码、缩放和渲染状态正确。
-- 打开文件前，空白页读书插画正常显示；打包后也包含该资源。
+- 打开文件前，首页显示文件打开入口和使用提示；应用图标正常，打包后不包含已移除的首页插画。
 - 划选正文后，在选区附近显示翻译进度和译文气泡，右侧面板内容一致；可复制或关闭气泡。
 - 在窗口边缘选择文字、缩小窗口或翻译较长段落时，气泡内容仍可阅读，必要时可在气泡内滚动。
 - 连续选择不同段落时，较早请求的返回结果不会覆盖当前选区；滚动、缩放和切换论文后不残留失去对应选区的气泡。

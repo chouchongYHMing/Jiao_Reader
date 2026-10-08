@@ -6,15 +6,17 @@ Projecte: [chouchongYHMing/Jiao_Reader](https://github.com/chouchongYHMing/Jiao_
 
 Lector local d’articles acadèmics en PDF per a Windows 10 / 11 x64. Utilitza PDF.js per mostrar els documents i els models ja instal·lats a l’Ollama de l’ordinador per traduir el text seleccionat.
 
-És una eina de lectura personal; la versió actual és la `0.3.1`. La pantalla inicial inclou una il·lustració no oficial de Takamatsu Tomori llegint al seu escriptori. Quan obres un article i hi selecciones text, la traducció apareix en un globus al costat de la selecció. El panell dret conserva tant el text original com la traducció completa.
+És una eina de lectura personal; la versió actual és la `0.3.2`. Quan obres un article i hi selecciones text, la traducció apareix en un globus al costat de la selecció. El panell dret conserva tant el text original com la traducció completa.
 
 **La interfície de l’aplicació és actualment en xinès simplificat i les traduccions del text seleccionat també són al xinès simplificat.** Aquesta versió en català correspon únicament a la documentació; no afegeix una interfície ni traduccions al català.
 
 ## Per a usuaris: instal·lar i començar a llegir
 
-1. Descarrega `Jiao_Reader-Setup-0.3.1.exe` de la pàgina [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) i executa’l per completar la instal·lació. Els fitxers etiquetats com a `Source code` contenen el codi font; per utilitzar l’aplicació, només cal descarregar el Setup.
+1. Descarrega `Jiao_Reader-Setup-0.3.2.exe` de la pàgina [Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases) i executa’l per completar la instal·lació. Els fitxers etiquetats com a `Source code` contenen el codi font; per utilitzar l’aplicació, només cal descarregar el Setup.
 2. Obre Jiao_Reader des de l’escriptori o el menú Inici i obre un PDF o arrossega’l a la finestra.
 3. Llegeix de manera contínua amb la roda del ratolí. La barra superior mostra la pàgina actual i el nombre total de pàgines. Pots introduir un número de pàgina per anar-hi directament o ajustar la visualització amb `+`, `−` i “适合宽度” (ajusta a l’amplada).
+
+La versió `0.3.2` reutilitza sense canvis l’executable d’inici d’Electron de la versió `0.3.1`. Les propietats del fitxer `.exe` a Windows poden continuar mostrant `0.3.1`; les versions de l’aplicació i de l’instal·lador són `0.3.2`.
 
 L’instal·lador inclou l’entorn d’execució de l’aplicació. Els companys amb qui la comparteixis no han d’instal·lar Node.js, Python ni eines de desenvolupament. Per defecte, s’instal·la només per a l’usuari actual de Windows. Pots canviar la carpeta de destinació per una altra on tinguis permís d’escriptura. L’instal·lador crea les dreceres de l’escriptori i del menú Inici, així com l’entrada de desinstal·lació a les aplicacions instal·lades de Windows. La carpeta predeterminada no requereix permisos d’administrador.
 
@@ -79,7 +81,7 @@ Per generar un instal·lador que es pugui distribuir:
 npm run build:win
 ```
 
-Fitxer resultant: `release\Jiao_Reader-Setup-0.3.1.exe`. Només cal compartir aquest instal·lador amb els companys. No cal enviar-los `node_modules`, el codi font, la carpeta de compilació de l’aplicació ni els fitxers dels teus models d’Ollama.
+Fitxer resultant: `release\Jiao_Reader-Setup-0.3.2.exe`. Només cal compartir aquest instal·lador amb els companys. No cal enviar-los `node_modules`, el codi font, la carpeta de compilació de l’aplicació ni els fitxers dels teus models d’Ollama.
 
 Per generar només la carpeta de l’aplicació `dist\Jiao_Reader-win32-x64` i poder-la verificar:
 
