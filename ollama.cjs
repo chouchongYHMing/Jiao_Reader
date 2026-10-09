@@ -23,7 +23,31 @@ function environmentValue(env, name) {
 }
 
 // Never search the current directory or execute a shell command supplied by the renderer.
+async function findMacOllamaExecutable({ fileSystem, env }) {
+  const candidates = ['/Applications/Ollama.app/Contents/Resources/ollama'];
+  const home = environmentValue(env, 'HOME');
+  if (home && path.posix.isAbsolute(home)) candidates.push(path.posix.join(home, 'Applications', 'Ollama.app', 'Contents', 'Resources', 'ollama'));
+  // Homebrew on Apple Silicon, then Intel/manual installs. GUI apps do not inherit the shell PATH.
+  candidates.push('/opt/homebrew/bin/ollama', '/usr/local/bin/ollama');
+  for (const entry of (environmentValue(env, 'PATH') || '').split(':')) {
+    const directory = entry.trim();
+    if (path.posix.isAbsolute(directory)) candidates.push(path.posix.join(directory, 'ollama'));
+  }
+  let incomplete = false;
+  for (const candidate of [...new Set(candidates)]) {
+    try {
+      const resolved = await fileSystem.realpath(candidate);
+      if (!path.posix.isAbsolute(resolved) || path.posix.basename(resolved) !== 'ollama') continue;
+      if ((await fileSystem.stat(resolved)).isFile()) return { installation: 'installed', executable: resolved };
+    } catch (error) {
+      if (!['ENOENT', 'ENOTDIR'].includes(error.code)) incomplete = true;
+    }
+  }
+  return { installation: incomplete ? 'unknown' : 'not-found', executable: null };
+}
+
 async function findOllamaExecutable({ fileSystem = fs, env = process.env, platform = process.platform } = {}) {
+  if (platform === 'darwin') return findMacOllamaExecutable({ fileSystem, env });
   if (platform !== 'win32') return { installation: 'unknown', executable: null };
   const candidates = [];
   const local = environmentValue(env, 'LOCALAPPDATA');
@@ -69,6 +93,7 @@ function createOllamaService({
   startAttempts = 20
 } = {}) {
   if (!settingsPath) throw new Error('缺少设置文件路径。');
+  const manualLaunch = platform === 'darwin' ? '从“应用程序”文件夹打开 Ollama' : '从开始菜单手动启动 Ollama';
   let preferencesPromise;
   let preferences = { selectedModel: '', initialized: false };
   let selectionQueue = Promise.resolve();
@@ -285,7 +310,7 @@ function createOllamaService({
       try { await listModels(); return status(); } catch { /* Only launch when the local service cannot be reached. */ }
       const found = await findOllamaExecutable({ fileSystem, env, platform });
       if (!found.executable) {
-        throw new OllamaError('未检测到可启动的 Ollama 程序。请安装 Ollama，或从开始菜单手动启动后重新检查。', 'installation');
+        throw new OllamaError(`未检测到可启动的 Ollama 程序。请安装 Ollama，或${manualLaunch}后重新检查。`, 'installation');
       }
       await new Promise((resolve, reject) => {
         const child = spawnImpl(found.executable, ['serve'], {
@@ -295,14 +320,14 @@ function createOllamaService({
           stdio: 'ignore',
           env: { ...env, OLLAMA_HOST: '127.0.0.1:11434', OLLAMA_NO_CLOUD: '1' }
         });
-        child.once('error', () => reject(new OllamaError('无法启动 Ollama。请从开始菜单手动启动后重新检查。', 'launch')));
+        child.once('error', () => reject(new OllamaError(`无法启动 Ollama。请${manualLaunch}后重新检查。`, 'launch')));
         child.once('spawn', () => { child.unref(); resolve(); });
       });
       for (let attempt = 0; attempt < startAttempts; attempt += 1) {
         await sleep(500);
         try { await listModels(1000); return status(); } catch { /* Give the new service time to bind. */ }
       }
-      return { connected: false, installation: 'installed', models: [], selectedModel: '', error: '已尝试启动 Ollama，但本地服务尚未就绪。请稍后重新检查，或从开始菜单手动启动 Ollama。' };
+      return { connected: false, installation: 'installed', models: [], selectedModel: '', error: `已尝试启动 Ollama，但本地服务尚未就绪。请稍后重新检查，或${manualLaunch}。` };
     })().finally(() => { startPromise = null; });
     return startPromise;
   }

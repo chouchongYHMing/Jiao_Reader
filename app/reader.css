@@ -1,4 +1,4 @@
-:root{font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:#26312f;background:#f5f3ee;font-synthesis:none}
+:root{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:#26312f;background:#f5f3ee;font-synthesis:none}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}button,input{font:inherit}button{cursor:pointer}[hidden]{display:none!important}
 .app-shell{display:grid;grid-template-columns:215px minmax(0,1fr) 350px;grid-template-rows:minmax(0,1fr);width:100vw;height:100vh;overflow:hidden}
 .library-pane,.translation-pane{min-height:0;background:#fcfbf8}.library-pane{display:flex;flex-direction:column;border-right:1px solid #e7e5dd;padding:28px 16px 20px}.translation-pane{display:flex;flex-direction:column;border-left:1px solid #e7e5dd}

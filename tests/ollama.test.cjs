@@ -202,3 +202,13 @@ test('start reports not detected without executing commands or downloading anyth
   await assert.rejects(service.startOllama(), /未检测到可启动/);
   assert.ok(calls.every(call => call.endpoint === '/api/tags'));
 });
+
+test('macOS detection finds the Ollama.app CLI and Homebrew installs', async () => {
+  const appCli = '/Applications/Ollama.app/Contents/Resources/ollama';
+  assert.deepEqual(await findOllamaExecutable({ fileSystem: memoryFiles({ [appCli]: '' }), env: { HOME: '/Users/student' }, platform: 'darwin' }), { installation: 'installed', executable: appCli });
+  const brew = '/opt/homebrew/bin/ollama';
+  assert.equal((await findOllamaExecutable({ fileSystem: memoryFiles({ [brew]: '' }), env: {}, platform: 'darwin' })).executable, brew);
+  const custom = '/Users/student/bin/ollama';
+  assert.equal((await findOllamaExecutable({ fileSystem: memoryFiles({ [custom]: '' }), env: { PATH: 'relative:/Users/student/bin' }, platform: 'darwin' })).executable, custom);
+  assert.equal((await findOllamaExecutable({ fileSystem: memoryFiles(), env: { HOME: '/Users/student' }, platform: 'darwin' })).installation, 'not-found');
+});

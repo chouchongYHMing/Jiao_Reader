@@ -4,7 +4,7 @@
 
 项目地址：[chouchongYHMing/Jiao_Reader](https://github.com/chouchongYHMing/Jiao_Reader) · 安装包下载：[Releases](https://github.com/chouchongYHMing/Jiao_Reader/releases)
 
-面向 Windows 10 / 11 x64 的本地论文 PDF 阅读器。使用 PDF.js 阅读论文，通过本机 Ollama 中已经安装的模型翻译选中的文字。
+面向 Windows 10 / 11 x64 与 macOS（Apple Silicon，M1–M4）的本地论文 PDF 阅读器。使用 PDF.js 阅读论文，通过本机 Ollama 中已经安装的模型翻译选中的文字。
 
 个人阅读工具，当前版本 `0.3.4`。打开论文后，划选文字即可在选区附近的气泡中查看译文，右侧保留完整原文与译文。
 
@@ -78,6 +78,30 @@
 
 PDF 文件在本机读取；需要翻译时，划选文字发送到本机 `127.0.0.1:11434`。目前支持带有可提取文字层的 PDF；扫描件需要先做 OCR。单个 PDF 最大 200 MB，单次翻译最多 3000 字；单条标注可引用最多 12000 字原文、包含最多 20 个标签（每个最多 50 字）和 6000 字笔记。
 
+## macOS（Apple Silicon）
+
+Mac 版只支持 M 系列芯片（arm64），需要 macOS 13 或更新版本。快捷键中的 `Ctrl` 在 Mac 上对应 `⌘`（`⌘O` 打开、`⌘+` / `⌘−` 缩放）。
+
+**安装：**
+
+1. 下载 `Jiao_Reader-0.3.4-arm64.zip`，双击解压，得到 `Jiao_Reader.app`。
+2. 把 `Jiao_Reader.app` 拖进“应用程序”文件夹，然后打开。
+
+**当前 Mac 版没有 Apple 开发者签名，只做了 ad-hoc 签名。** 从网上下载的副本第一次打开时会被 macOS 拦截，提示无法验证开发者。这时打开“系统设置 → 隐私与安全性”，在页面下方点“仍要打开”，之后就能正常启动。自己在本机构建的副本不会被拦截。
+
+**翻译：** 安装 [Ollama macOS 版](https://ollama.com/download/mac)（或 `brew install ollama`），然后执行 `ollama pull qwen3:4b-instruct`。应用会在 `/Applications/Ollama.app`、`~/Applications/Ollama.app`、`/opt/homebrew/bin` 与 `/usr/local/bin` 中查找 Ollama，也可以在应用里一键启动本地服务。阅读记录、标注和模型选择保存在 `~/Library/Application Support/` 下的应用目录中。
+
+**从源码运行或打包**（需要 Node.js 22.12+）：
+
+```bash
+npm ci
+npm start                    # 直接运行
+npm run build:mac            # 在 Mac 上打包：release/Jiao_Reader-0.3.4-arm64.dmg 与 .zip
+npm run build:mac:dir        # 只生成 release/mac-arm64/Jiao_Reader.app，便于先验证
+```
+
+打包命令需要在 Mac 上运行（会用到系统自带的 `hdiutil` 和 `codesign`）。
+
 ## 开发与打包
 
 以下命令仅供维护项目的人使用，同学安装发行版不需要执行。需要 Windows x64 和 Node.js 22.12 或更新版本。首次安装构建依赖、下载 Electron 与 NSIS 工具需要联网。
@@ -129,8 +153,8 @@ ollama.cjs                    Ollama 检测、模型列表与本地翻译
 preload.cjs                   限定页面可调用的桌面接口
 app/                          阅读界面、PDF 渲染与交互模块
 app/pdfjs/                    PDF.js、字符映射与字体资源
-electron-builder.yml          Windows NSIS 安装包配置
-build-resources/              Windows 图标、安装模式与便携版打包脚本
+electron-builder.yml          Windows NSIS 与 macOS arm64 DMG 安装包配置
+build-resources/              图标、Windows 安装 / 便携版脚本、macOS 构建与 ad-hoc 签名脚本
 docs/                         首次使用和发行验证说明
 ```
 
