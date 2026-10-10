@@ -11,6 +11,7 @@ playwright-report/
 .test-output/
 backups/
 *.log
+.DS_Store
 # Personal papers and local model files do not belong in the source repository.
 *.pdf
 *.gguf

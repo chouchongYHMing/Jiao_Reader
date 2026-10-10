@@ -625,12 +625,17 @@ document.addEventListener('pointercancel', () => { selectingPdf = false; dismiss
 // An edge scroll after pointer release must not discard the pending selection.
 ui.readerScroll.addEventListener('scroll', () => bubble.hide(), { passive: true });
 window.addEventListener('blur', () => { selectingPdf = false; dismissBubble(); });
+// macOS uses Cmd for the same shortcuts that Windows binds to Ctrl.
+const isMac = /Mac/i.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent);
+const shortcutKey = event => (isMac ? event.metaKey : event.ctrlKey);
+const zoomHint = document.querySelector('.reader-footer span');
+if (isMac && zoomHint) zoomHint.textContent = '滚轮上下阅读 · ⌘ + / − 缩放';
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape') { dismissBubble(); card.close(); highlights.clearFocus(); }
   if (event.target.closest?.('dialog[open], input, textarea, [contenteditable="true"]')) return;
-  if (event.ctrlKey && event.key.toLowerCase() === 'o') { event.preventDefault(); dismissBubble(); choosePdf(); }
-  if (event.ctrlKey && (event.key === '+' || event.key === '=')) { event.preventDefault(); setReaderScale(reader.scale + 0.1); }
-  if (event.ctrlKey && event.key === '-') { event.preventDefault(); setReaderScale(reader.scale - 0.1); }
+  if (shortcutKey(event) && event.key.toLowerCase() === 'o') { event.preventDefault(); dismissBubble(); choosePdf(); }
+  if (shortcutKey(event) && (event.key === '+' || event.key === '=')) { event.preventDefault(); setReaderScale(reader.scale + 0.1); }
+  if (shortcutKey(event) && event.key === '-') { event.preventDefault(); setReaderScale(reader.scale - 0.1); }
 });
 document.addEventListener('dragover', event => {
   if (!event.dataTransfer.types.includes('Files')) return;

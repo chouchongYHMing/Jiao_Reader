@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu, shell } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -13,7 +13,43 @@ let mainWindow;
 let ollama;
 let readingStore;
 
-app.setAppUserModelId('com.jiao.reader');
+if (process.platform === 'win32') app.setAppUserModelId('com.jiao.reader');
+
+// macOS keeps a global menu bar. Edit roles are required for Cmd+C / Cmd+V / Cmd+A
+// in text fields and the PDF text layer; zoom roles are left out so Cmd + / − reach the reader.
+function installMacMenu() {
+  if (process.platform !== 'darwin') return;
+  const name = 'Jiao_Reader';
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    { label: name, submenu: [
+      { role: 'about', label: `关于 ${name}` },
+      { type: 'separator' },
+      { role: 'services', label: '服务' },
+      { type: 'separator' },
+      { role: 'hide', label: `隐藏 ${name}` },
+      { role: 'hideOthers', label: '隐藏其他' },
+      { role: 'unhide', label: '全部显示' },
+      { type: 'separator' },
+      { role: 'quit', label: `退出 ${name}` }
+    ] },
+    { label: '编辑', submenu: [
+      { role: 'undo', label: '撤销' },
+      { role: 'redo', label: '重做' },
+      { type: 'separator' },
+      { role: 'cut', label: '剪切' },
+      { role: 'copy', label: '拷贝' },
+      { role: 'paste', label: '粘贴' },
+      { role: 'selectAll', label: '全选' }
+    ] },
+    { label: '窗口', role: 'window', submenu: [
+      { role: 'minimize', label: '最小化' },
+      { role: 'zoom', label: '缩放' },
+      { type: 'separator' },
+      { role: 'front', label: '前置全部窗口' },
+      { role: 'close', label: '关闭窗口' }
+    ] }
+  ]));
+}
 
 async function readPdf(filePath) {
   if (path.extname(filePath).toLowerCase() !== '.pdf') throw new Error('只能打开 PDF 文件。');
@@ -154,6 +190,7 @@ app.whenReady().then(() => {
   readingStore = createReadingStore({ directory: app.getPath('userData'), fs });
   ollama = createOllamaService({ settingsPath: path.join(app.getPath('userData'), 'settings.json') });
   registerIpc();
+  installMacMenu();
   createWindow();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });

@@ -4,6 +4,8 @@ productName: Jiao_Reader
 electronVersion: 44.5.1
 asar: true
 npmRebuild: false
+# Ad-hoc signs the macOS .app (no-op for Windows builds).
+afterPack: build-resources/mac-adhoc-sign.cjs
 directories:
   output: release
   buildResources: build-resources
@@ -16,21 +18,6 @@ files:
   - app/**/*
   - '!**/*.map'
   - '!**/{test,tests,__tests__,validation,test-results}/**/*'
-extraFiles:
-  - from: LICENSE
-    to: LICENSE.jiao-reader.txt
-  - from: README.md
-    to: README.md
-  - from: README.en.md
-    to: README.en.md
-  - from: README.ca.md
-    to: README.ca.md
-  - from: README.es.md
-    to: README.es.md
-  - from: docs
-    to: docs
-    filter:
-      - '*.md'
 win:
   target:
     - target: nsis
@@ -39,6 +26,22 @@ win:
   executableName: Jiao_Reader
   icon: build-resources/icon.ico
   requestedExecutionLevel: asInvoker
+  # Documentation next to Jiao_Reader.exe.
+  extraFiles:
+    - from: LICENSE
+      to: LICENSE.jiao-reader.txt
+    - from: README.md
+      to: README.md
+    - from: README.en.md
+      to: README.en.md
+    - from: README.ca.md
+      to: README.ca.md
+    - from: README.es.md
+      to: README.es.md
+    - from: docs
+      to: docs
+      filter:
+        - '*.md'
 nsis:
   artifactName: Jiao_Reader-Setup-${version}.${ext}
   oneClick: false
@@ -56,4 +59,40 @@ nsis:
   installerLanguages:
     - zh_CN
     - en_US
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+    - target: zip
+      arch:
+        - arm64
+  icon: build-resources/icon.icns
+  category: public.app-category.education
+  artifactName: Jiao_Reader-${version}-${arch}.${ext}
+  # No Apple Developer ID: skip electron-builder signing; afterPack applies an ad-hoc signature.
+  identity: null
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  extendInfo:
+    CFBundleDisplayName: Jiao_Reader
+  # Files placed directly in Contents/ would break code signing, so documentation goes to Contents/Resources.
+  extraResources:
+    - from: LICENSE
+      to: LICENSE.jiao-reader.txt
+    - from: README.md
+      to: README.md
+    - from: README.en.md
+      to: README.en.md
+    - from: README.ca.md
+      to: README.ca.md
+    - from: README.es.md
+      to: README.es.md
+    - from: docs
+      to: docs
+      filter:
+        - '*.md'
+dmg:
+  title: Jiao_Reader ${version}
+  writeUpdateInfo: false
 publish: null
