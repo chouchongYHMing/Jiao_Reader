@@ -76,9 +76,12 @@ function quotationRects(note, record) {
 }
 
 export class PdfHighlights {
-  constructor(reader) {
+  constructor(reader, onNote = () => {}) {
     this.reader = reader;
     this.notes = [];
+    this.onNote = onNote;
+    this.focus = null;
+    this.focusSerial = 0;
   }
 
   setNotes(notes) {
@@ -86,28 +89,90 @@ export class PdfHighlights {
     for (const record of this.reader.records.values()) this.render(record);
   }
 
+  clearFocus() {
+    ++this.focusSerial;
+    this.focus = null;
+    for (const record of this.reader.records.values()) record.body.querySelector('.pdf-history-layer')?.remove();
+  }
+
+  async revealSelection(selection) {
+    this.clearFocus();
+    const serial = this.focusSerial;
+    const version = this.reader.version;
+    const record = await this.reader.revealPage(Number(selection.page));
+    if (!record || serial !== this.focusSerial || version !== this.reader.version) return false;
+    const rects = selection.rects?.length ? selection.rects : quotationRects(selection, record);
+    if (!rects.length) return false;
+    this.focus = { ...selection, rects };
+    this.render(record);
+    this.reader.scrollToSelection(record, rects[0]);
+    return true;
+  }
+
+  rectangle(className, rect) {
+    const node = document.createElement('span');
+    node.className = className;
+    node.style.left = `${rect.x * 100}%`;
+    node.style.top = `${rect.y * 100}%`;
+    node.style.width = `${rect.width * 100}%`;
+    node.style.height = `${rect.height * 100}%`;
+    return node;
+  }
+
   render(record) {
     record.body.querySelector('.pdf-annotation-layer')?.remove();
+    record.body.querySelector('.pdf-note-markers')?.remove();
+    record.body.querySelector('.pdf-history-layer')?.remove();
     if (!record.layer || !record.body.classList.contains('rendered')) return;
     const notes = this.notes.filter(note => Number(note.page) === record.number);
-    if (!notes.length) return;
     const layer = document.createElement('div');
     layer.className = 'pdf-annotation-layer';
     layer.setAttribute('aria-hidden', 'true');
+    const markers = document.createElement('div');
+    markers.className = 'pdf-note-markers';
     for (const note of notes) {
       const rects = note.rects?.length ? note.rects : quotationRects(note, record);
       for (const rect of rects) {
-        const highlight = document.createElement('span');
-        highlight.className = 'pdf-annotation-highlight';
+        const highlight = this.rectangle('pdf-annotation-highlight', rect);
         highlight.dataset.annotationId = note.id;
         applyColor(highlight, noteColor(note));
-        highlight.style.left = `${rect.x * 100}%`;
-        highlight.style.top = `${rect.y * 100}%`;
-        highlight.style.width = `${rect.width * 100}%`;
-        highlight.style.height = `${rect.height * 100}%`;
         layer.append(highlight);
+      }
+      if (rects.length && note.comment?.trim()) {
+        const end = rects.at(-1);
+        const marker = document.createElement('button');
+        marker.type = 'button';
+        marker.className = 'pdf-note-marker';
+        marker.dataset.annotationId = note.id;
+        marker.setAttribute('aria-label', `查看第 ${note.page} 页的评论`);
+        marker.setAttribute('aria-haspopup', 'dialog');
+        marker.title = note.comment.slice(0, 160);
+        applyColor(marker, noteColor(note));
+        marker.style.left = `${Math.max(0, Math.min(end.x + end.width, 1 - 24 / record.viewport.width)) * 100}%`;
+        marker.style.top = `${Math.max(0, Math.min(end.y + end.height, 1 - 20 / record.viewport.height)) * 100}%`;
+        const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        icon.setAttribute('viewBox', '0 0 20 20');
+        icon.setAttribute('aria-hidden', 'true');
+        const path = document.createElementNS(icon.namespaceURI, 'path');
+        path.setAttribute('d', 'M4 3.5h12a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H8L3 18V5a1.5 1.5 0 0 1 1-1.5ZM6 7.5h8M6 10.5h6');
+        icon.append(path);
+        marker.append(icon);
+        marker.addEventListener('click', event => { event.stopPropagation(); this.onNote(note, marker); });
+        markers.append(marker);
       }
     }
     if (layer.childElementCount) record.body.append(layer);
+    if (markers.childElementCount) record.body.append(markers);
+    if (Number(this.focus?.page) === record.number) {
+      const historyLayer = document.createElement('div');
+      historyLayer.className = 'pdf-history-layer';
+      historyLayer.setAttribute('aria-hidden', 'true');
+      for (const rect of this.focus.rects) {
+        const highlight = this.rectangle('pdf-history-highlight', rect);
+        highlight.dataset.selectionId = this.focus.id;
+        historyLayer.append(highlight);
+      }
+      record.body.append(historyLayer);
+    }
   }
 }

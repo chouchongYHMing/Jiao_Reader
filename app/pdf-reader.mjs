@@ -144,13 +144,17 @@ export class PdfReader {
     this.selection.detach(record.layer);
     record.layer?.remove();
     record.body.querySelector('.pdf-annotation-layer')?.remove();
+    record.body.querySelector('.pdf-note-markers')?.remove();
+    record.body.querySelector('.pdf-history-layer')?.remove();
     record.canvas = record.layer = record.textTask = null;
     record.renderedScale = 0;
     record.body.classList.remove('rendered');
   }
 
   async render(record) {
-    if (!this.isCurrent(record) || record.pending || record.renderedScale === this.scale) return;
+    if (!this.isCurrent(record)) return;
+    if (record.pending) return record.pending.done;
+    if (record.renderedScale === this.scale) return;
     const scale = this.scale;
     const viewport = record.viewport;
     const canvas = document.createElement('canvas');
@@ -165,6 +169,7 @@ export class PdfReader {
     layer.className = 'textLayer';
     layer.style.visibility = 'hidden';
     const pending = { canvas, layer, cancelled: false };
+    pending.done = new Promise(resolve => { pending.finish = resolve; });
     record.pending = pending;
     record.loading.textContent = `正在加载第 ${record.number} 页`;
     record.body.append(canvas, layer);
@@ -200,11 +205,36 @@ export class PdfReader {
     } finally {
       if (!pending.committed) { canvas.remove(); layer.remove(); }
       if (record.pending === pending) record.pending = null;
+      pending.finish();
     }
   }
 
   pageTop(record) {
     return record.body.getBoundingClientRect().top - this.container.getBoundingClientRect().top + this.container.scrollTop;
+  }
+
+  async revealPage(number) {
+    if (!this.ready || !this.records.has(Number(number))) return null;
+    const record = this.records.get(Number(number));
+    const version = this.version;
+    this.selection.cancel();
+    window.getSelection()?.removeAllRanges();
+    this.goToPage(number);
+    await this.render(record);
+    if (version !== this.version || !this.ready || !this.isCurrent(record) || !record.layer) return null;
+    return record;
+  }
+
+  scrollToSelection(record, rect) {
+    if (!this.isCurrent(record)) return;
+    const frame = this.container.getBoundingClientRect();
+    const body = record.body.getBoundingClientRect();
+    this.container.scrollTo({
+      top: Math.max(0, this.pageTop(record) - 16, this.pageTop(record) + rect.y * body.height - Math.min(150, this.container.clientHeight * .25)),
+      left: Math.max(0, body.left - frame.left + this.container.scrollLeft + rect.x * body.width - Math.min(100, this.container.clientWidth * .2)),
+      behavior: 'instant'
+    });
+    this.updateViewport();
   }
 
   setScale(value) {

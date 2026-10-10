@@ -26,7 +26,7 @@ git init -b main
 git status --short
 git add .
 git diff --cached --stat
-git commit -m "Release Jiao_Reader 0.3.4"
+git commit -m "Release Jiao_Reader 0.3.5"
 git remote add origin https://github.com/chouchongYHMing/Jiao_Reader.git
 git push -u origin main
 ```
@@ -43,6 +43,7 @@ npm run check
 npm test
 npm run test:reading
 npm run test:tags
+npm run test:navigation
 npm run build:win
 ```
 
@@ -50,22 +51,22 @@ npm run build:win
 
 | 文件 | 用途 |
 | --- | --- |
-| `release/Jiao_Reader-Setup-0.3.4.exe` | 同学直接下载并安装 |
+| `release/Jiao_Reader-Setup-0.3.5.exe` | 同学直接下载并安装 |
 | `release/SHA256SUMS.txt` | 核对下载文件的 SHA-256 |
-| `Jiao_Reader-Portable-0.3.4-win-x64.zip`（可选） | 不使用安装向导的便携版 |
+| `Jiao_Reader-Portable-0.3.5-win-x64.zip`（可选） | 不使用安装向导的便携版 |
 
 需要便携版时先运行 `npm run package:win`，然后压缩整个 `dist/Jiao_Reader-win32-x64/` 文件夹。单独上传里面的 `Jiao_Reader.exe` 无法运行。
 
-本次 `0.3.4` 发行沿用已发行 `0.3.1` 便携版的 Electron 启动程序，更新运行源码、`app.asar` 和随包文档，再生成版本为 `0.3.4` 的安装包。Windows 的 `.exe` 文件属性可能仍显示 `0.3.1`，应用读取的版本为 `0.3.4`。启动程序来源、SHA-256 及原生运行时和图标的校验结果记录在 `release/VALIDATION-0.3.4.md`。常规 `npm run build:win` 会重新生成启动程序，不保证其字节与本次发行包的启动程序一致。
+本次 `0.3.5` 发行沿用已发行 `0.3.1` 便携版的 Electron 启动程序，更新运行源码、`app.asar` 和随包文档，再生成版本为 `0.3.5` 的安装包。Windows 的 `.exe` 文件属性可能仍显示 `0.3.1`，应用读取的版本为 `0.3.5`。启动程序来源、SHA-256 及原生运行时和图标的校验结果记录在 `release/VALIDATION-0.3.5.md`。常规 `npm run build:win` 会重新生成启动程序，不保证其字节与本次发行包的启动程序一致。
 
-旧版用户先关闭 Jiao_Reader，再运行新版 Setup 并保持原安装目录，直接覆盖升级即可；不必先卸载，也没有软件内自动更新功能。最近阅读、优先级、已保存笔记和模型选择保留，原始 PDF 与 Ollama 不受影响。便携版需要替换完整程序目录，Setup 不会自动更新其他位置的便携版。
+旧版用户先关闭 Jiao_Reader，再运行新版 Setup 并保持原安装目录，直接覆盖升级即可；不必先卸载，也没有软件内自动更新功能。最近阅读、优先级、已保存笔记、已持久保存的选文历史和模型选择保留，原始 PDF 与 Ollama 不受影响。旧版未写入磁盘的临时历史无法补回，已保存笔记不受影响。后续版本继续使用同一 `appId: com.jiao.reader`。便携版需要替换完整程序目录，Setup 不会自动更新其他位置的便携版。
 
 后续重新构建安装包时，在 PowerShell 更新校验文件：
 
 ```powershell
-$setupPath = 'release/Jiao_Reader-Setup-0.3.4.exe'
+$setupPath = 'release/Jiao_Reader-Setup-0.3.5.exe'
 $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLowerInvariant()
-"$setupHash  Jiao_Reader-Setup-0.3.4.exe" | Set-Content -LiteralPath 'release/SHA256SUMS.txt' -Encoding ascii
+"$setupHash  Jiao_Reader-Setup-0.3.5.exe" | Set-Content -LiteralPath 'release/SHA256SUMS.txt' -Encoding ascii
 ```
 
 该命令只写安装包的校验值；若另附便携版，可将它的校验值补充到同一文件。
@@ -73,8 +74,8 @@ $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLow
 ## 4. 创建 GitHub Release
 
 1. 确认上传的源码与刚构建的安装包一致，在仓库主页打开 **Releases → Draft a new release**。
-2. 新建标签 `v0.3.4`，Target 选择刚推送的 `main`。
-3. 标题填写 `Jiao_Reader 0.3.4`，填写下面的版本说明。
+2. 新建标签 `v0.3.5`，Target 选择刚推送的 `main`。
+3. 标题填写 `Jiao_Reader 0.3.5`，填写下面的版本说明。
 4. 在附件区域上传 Setup 和 `SHA256SUMS.txt`；便携版 ZIP 可选。
 5. 等待附件上传完成，再点击 **Publish release**。
 
@@ -83,26 +84,25 @@ $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLow
 可直接使用的版本说明：
 
 ```markdown
-## Jiao_Reader 0.3.4
+## Jiao_Reader 0.3.5
 
-- 最近阅读右键新增“优先级 +1”和“优先级清零”，角标显示当前优先级。
-- 最近阅读先按优先级降序，再按最近阅读时间排序，优先级重启后保留。
-- 标签新增六种荧光笔配色，保存后对应选文在 PDF 中同步高亮，缩放和重启后可恢复。
-- 可按同一 tag 汇总相关选文与笔记；每段评论独立保存。同篇文献的同名标签改色会同步，不覆盖评论。
-- 划选正文后，可在右下角“本次阅读”中右键选文，添加标签、评论、笔记或注释；无需 Ollama，也无需先翻译。
-- 顶部文献标题右侧、页码左侧新增“标签与笔记”列表，按最近更新时间排序，支持跳回对应页码、编辑和删除。
-- 标签和笔记独立保存在本机，重启后仍在；复制或重命名内容完全相同的 PDF 仍关联原有标注，不改动 PDF 文件。
-- 本次阅读的选文与翻译历史仅为当前文献的暂存记录；切换文献或重启会清空，已保存笔记不受影响。
+- 有评论的 PDF 高亮末尾新增小气泡，点击可查看和编辑评论；卡片中还可打开完整标签编辑弹窗。只有标签的高亮不显示评论气泡。
+- “本次阅读”的选文和已有译文按 PDF 完整内容保存在本机，切换文献或重启后再打开可以恢复；同内容的复制件和重命名文件共享记录。
+- 每篇文献保留最多 100 条选文历史，每条最多保存 12000 字原文与 64000 字译文。
+- 点击历史记录跳回原页和选文位置、显示原选区，并在右侧恢复原文和译文；不会重新翻译或生成重复历史。
+- “标签与笔记”的页码按钮也会定位原选文。原有标签筛选、六色高亮和独立评论继续保留。
+- 最近阅读优先级、已保存笔记和模型选择保留；旧版未保存的临时历史无法补回。记录和标注不改动 PDF 文件。
 - 保留连续阅读、缩放、页码跳转、划选翻译气泡和本地模型选择。
 - 同步更新中文、英文、加泰语和西班牙语 README。
 
 ### 安装
 
-Windows 10 / 11 x64：下载下方 Assets 中的 Jiao_Reader-Setup-0.3.4.exe。
+Windows 10 / 11 x64：下载下方 Assets 中的 Jiao_Reader-Setup-0.3.5.exe。
 安装包包含运行环境，不需要 Node.js 或 Python。
 Source code 是源码压缩包，普通使用者无需下载。
 旧版升级：关闭阅读器后，用新版 Setup 覆盖原安装目录，无需先卸载。
-最近阅读、已保存笔记和模型选择保留；软件没有自动更新功能。
+最近阅读、优先级、已保存笔记、已持久保存的选文历史和模型选择保留；软件没有自动更新功能。
+旧版未保存到本机的临时历史无法补回，已保存笔记不受影响。
 
 ### 翻译准备
 

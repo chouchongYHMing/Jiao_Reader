@@ -13,6 +13,9 @@ const PALETTE_IDS = new Set(['amber', 'sage', 'blue', 'violet', 'peach', 'rose']
 const DEFAULT_COLOR = 'amber';
 const RECT_TOLERANCE = 1e-5;
 const MAX_RECTS = 2000;
+const MAX_SELECTIONS = 100;
+const MAX_RESULT_LENGTH = 64000;
+const MAX_MODEL_LENGTH = 200;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function validateFilePath(filePath) {
@@ -31,6 +34,11 @@ function validateDocumentId(documentId) {
 
 function validateAnnotationId(id) {
   if (typeof id !== 'string' || !UUID.test(id)) throw new Error('无效笔记标识。');
+  return id.toLowerCase();
+}
+
+function validateSelectionId(id) {
+  if (typeof id !== 'string' || !UUID.test(id)) throw new Error('无效划选标识。');
   return id.toLowerCase();
 }
 
@@ -93,6 +101,27 @@ function annotationFields(input) {
     }
     // Object.fromEntries creates own properties, including a tag literally named __proto__.
     fields.tagColors = Object.fromEntries(canonical);
+  }
+  return fields;
+}
+
+function selectionFields(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('无效划选记录。');
+  if (!Number.isSafeInteger(input.page) || input.page < 1 || input.page > 1000000) throw new Error('无效页码。');
+  if (typeof input.source !== 'string' || !input.source.trim() || input.source.length > MAX_SOURCE_LENGTH) {
+    throw new Error('划选原文不能为空，且不能超过 12000 个字符。');
+  }
+  const fields = { page: input.page, source: input.source };
+  if (input.rects !== undefined) fields.rects = annotationRects(input.rects);
+  if (input.result !== undefined) {
+    if (typeof input.result !== 'string' || input.result.length > MAX_RESULT_LENGTH) {
+      throw new Error('翻译结果不能超过 64000 个字符。');
+    }
+    fields.result = input.result;
+  }
+  if (input.model !== undefined) {
+    if (typeof input.model !== 'string' || input.model.length > MAX_MODEL_LENGTH) throw new Error('无效翻译模型。');
+    fields.model = input.model;
   }
   return fields;
 }
@@ -318,7 +347,67 @@ function createReadingStore({ directory, fs = filesystem, now = Date.now, uuid =
     });
   }
 
-  return { recent, remember, setRecentPriority, removeRecent, clearRecent, annotations, saveAnnotation, removeAnnotation };
+  function selectionHistoryPath(documentId) {
+    return path.join(directory, 'selection-history', `${validateDocumentId(documentId)}.json`);
+  }
+
+  async function readSelectionHistory(filename) {
+    const records = await readJson(filename, []);
+    if (!Array.isArray(records)) throw new Error('划选记录文件格式无效，未覆盖原文件。');
+    const seen = new Set();
+    let normalized;
+    try {
+      normalized = records.map(record => {
+        const id = validateSelectionId(record?.id);
+        const fields = selectionFields(record);
+        if (seen.has(id) || !Number.isSafeInteger(record.createdAt) || record.createdAt < 1
+          || !Number.isSafeInteger(record.updatedAt) || record.updatedAt < record.createdAt) {
+          throw new Error('Invalid stored selection');
+        }
+        seen.add(id);
+        return {
+          id, ...fields, result: fields.result ?? '', model: fields.model ?? '',
+          createdAt: record.createdAt, updatedAt: record.updatedAt
+        };
+      });
+    } catch { throw new Error('划选记录文件格式无效，未覆盖原文件。'); }
+    return normalized.sort((a, b) => b.createdAt - a.createdAt).slice(0, MAX_SELECTIONS);
+  }
+
+  async function selectionHistory(documentId) {
+    const filename = selectionHistoryPath(documentId);
+    await writeQueue;
+    return readSelectionHistory(filename);
+  }
+
+  function saveSelection(documentId, input) {
+    const filename = selectionHistoryPath(documentId);
+    const fields = selectionFields(input);
+    const id = input.id === undefined ? null : validateSelectionId(input.id);
+    return enqueue(async () => {
+      const records = await readSelectionHistory(filename);
+      const previous = id ? records.find(record => record.id === id) : null;
+      const timestamp = nextTimestamp(records.map(record => record.updatedAt));
+      const saved = {
+        id: previous?.id ?? id ?? validateSelectionId(uuid()), ...fields,
+        result: fields.result ?? previous?.result ?? '',
+        model: fields.model ?? previous?.model ?? '',
+        createdAt: previous?.createdAt ?? timestamp,
+        updatedAt: timestamp
+      };
+      if (fields.rects === undefined && previous?.rects !== undefined) saved.rects = previous.rects;
+      // Translation can finish after another selection. Keep the original capture order.
+      const next = [saved, ...records.filter(record => record.id !== saved.id)]
+        .sort((a, b) => b.createdAt - a.createdAt).slice(0, MAX_SELECTIONS);
+      await writeJson(filename, next);
+      return saved;
+    });
+  }
+
+  return {
+    recent, remember, setRecentPriority, removeRecent, clearRecent, annotations, saveAnnotation, removeAnnotation,
+    selectionHistory, saveSelection
+  };
 }
 
 module.exports = { createReadingStore };

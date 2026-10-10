@@ -1,7 +1,7 @@
 {
   "name": "jiao-reader",
   "productName": "Jiao Reader",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": true,
   "author": "yuhowmean",
   "license": "MIT",
@@ -9,7 +9,7 @@
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
-    "check": "node --check main.cjs && node --check preload.cjs && node --check ollama.cjs && node --check reading-store.cjs && node --check app/reader.mjs && node --check app/context-menu.mjs && node --check app/annotations.mjs && node --check app/annotation-colors.mjs && node --check app/pdf-highlights.mjs && node --check app/pdf-reader.mjs && node --check app/pdf-selection.mjs && node --check app/text-order.mjs && node --check app/translation-bubble.mjs && node --check build-resources/package-portable.cjs && node --check build-resources/build-installer.cjs",
+    "check": "node --check main.cjs && node --check preload.cjs && node --check ollama.cjs && node --check reading-store.cjs && node --check app/reader.mjs && node --check app/context-menu.mjs && node --check app/annotations.mjs && node --check app/annotation-card.mjs && node --check app/annotation-colors.mjs && node --check app/pdf-highlights.mjs && node --check app/pdf-reader.mjs && node --check app/pdf-selection.mjs && node --check app/text-order.mjs && node --check app/translation-bubble.mjs && node --check build-resources/package-portable.cjs && node --check build-resources/build-installer.cjs",
     "test": "node --test tests/*.test.cjs",
     "test:reader": "node tests/reader-smoke.cjs",
     "package:win": "node build-resources/package-portable.cjs",
@@ -18,7 +18,8 @@
     "test:selection": "node tests/selection-smoke.cjs",
     "test:recent": "node tests/recent-ui-smoke.cjs",
     "test:reading": "node tests/reading-ui-smoke.cjs",
-    "test:tags": "node tests/tag-colors-smoke.cjs"
+    "test:tags": "node tests/tag-colors-smoke.cjs",
+    "test:navigation": "node tests/navigation-smoke.cjs"
   },
   "devDependencies": {
     "electron": "44.5.1",

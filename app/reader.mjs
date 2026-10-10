@@ -2,6 +2,7 @@ import { PdfReader } from './pdf-reader.mjs';
 import { TranslationBubble } from './translation-bubble.mjs';
 import { ContextMenu } from './context-menu.mjs';
 import { AnnotationPanel } from './annotations.mjs';
+import { AnnotationCard } from './annotation-card.mjs';
 import { PdfHighlights, capturePageRects } from './pdf-highlights.mjs';
 import { applyColor, colorForTag } from './annotation-colors.mjs';
 
@@ -18,7 +19,8 @@ let fileName = '';
 let filePath = '';
 let documentId = '';
 let currentSelection = null;
-let selectionSerial = 0;
+let selectionGesture = 0;
+let revealSerial = 0;
 let recentBusy = false;
 let openSerial = 0;
 let openRequestSerial = 0;
@@ -41,12 +43,13 @@ const history = [];
 const bubble = new TranslationBubble(ui.readerScroll, text => copyText(text, '译文已复制'), dismissBubble);
 const contextMenu = new ContextMenu();
 let highlights;
+let card;
 const annotations = new AnnotationPanel({
   button: ui.annotationsButton,
   container: document.body,
-  onNavigate: page => { dismissBubble(); reader.goToPage(page); },
+  onNavigate: note => { dismissBubble(); card.close(); void revealSelection(note); },
   onToast: showToast,
-  onChange: notes => { highlights?.setNotes(notes); renderHistory(); }
+  onChange: notes => { highlights?.setNotes(notes); card?.setNotes(notes); renderHistory(); }
 });
 
 const reader = new PdfReader(ui.readerScroll, ui.pages, state => {
@@ -63,7 +66,17 @@ const reader = new PdfReader(ui.readerScroll, ui.pages, state => {
   ui.zoomValue.textContent = `${Math.round(state.scale * 100)}%`;
   ui.annotationsButton.disabled = !state.ready || !documentId;
 }, record => highlights?.render(record));
-highlights = new PdfHighlights(reader);
+highlights = new PdfHighlights(reader, (note, anchor) => {
+  dismissBubble();
+  annotations.close(false);
+  card.open(note, anchor);
+});
+card = new AnnotationCard({
+  onSaved: notes => annotations.replaceNotes(notes),
+  onEditTags: note => annotations.editSelection({ ...note, annotationId: note.id }, 'tags'),
+  resolveAnchor: id => ui.pages.querySelector(`.pdf-note-marker[data-annotation-id="${id}"]`),
+  onToast: showToast
+});
 
 function showToast(message) {
   ui.toast.textContent = message;
@@ -217,8 +230,11 @@ async function openDroppedPdf(file) {
 
 async function openPdf(name, bytes, path = '') {
   const serial = ++openSerial;
+  ++revealSerial;
   resetTranslation();
   contextMenu.close();
+  card.setDocument('', '');
+  highlights.clearFocus();
   currentSelection = null;
   history.length = 0;
   documentId = '';
@@ -238,15 +254,30 @@ async function openPdf(name, bytes, path = '') {
     const digest = await crypto.subtle.digest('SHA-256', bytes);
     if (serial !== openSerial) return;
     documentId = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('');
+    const openedId = documentId;
+    card.setDocument(openedId, name);
     await annotations.setDocument(documentId, name);
     if (serial !== openSerial) return;
+    try {
+      const saved = await window.jiao.selectionHistory(openedId);
+      if (serial !== openSerial) return;
+      history.push(...saved.map(item => ({ ...item, documentId: openedId, status: item.result ? 'success' : 'selected', storageState: 'saved' })));
+      renderHistory();
+    } catch (error) {
+      if (serial !== openSerial) return;
+      showToast(`划选历史读取失败：${error.message}`);
+    }
     ui.annotationsButton.disabled = true;
     ui.pdfStage.hidden = false;
     if (await reader.open(bytes) && serial === openSerial) showToast(`${name} · ${reader.totalPages} 页`);
   } catch (error) {
     if (serial !== openSerial) return;
     documentId = '';
+    card.setDocument('', '');
+    history.length = 0;
+    currentSelection = null;
     annotations.setDocument('', '');
+    renderHistory();
     ui.emptyState.hidden = false;
     ui.pdfStage.hidden = true;
     showToast(`PDF 打开失败：${error.message}`);
@@ -280,7 +311,7 @@ function handleSelection() {
   const item = captureSelection(text, page, capturePageRects(range, body));
   bubble.open(anchor, text, text === selectedText ? ui.translationText.textContent : '正在准备翻译…', text === selectedText ? translationState : 'loading');
   if (text === selectedText) {
-    if (translation && item) { item.result = translation; item.model = selectedModel; item.status = 'success'; renderHistory(); }
+    if (translation && item) { item.result = translation; item.model = selectedModel; item.status = 'success'; void persistSelection(item); renderHistory(); }
     return;
   }
   runTranslation(text, item);
@@ -288,17 +319,66 @@ function handleSelection() {
 
 function captureSelection(text, page, rects = []) {
   if (!documentId || !page) return null;
-  if (currentSelection?.source === text && currentSelection.page === page && currentSelection.documentId === documentId) {
+  if (currentSelection?.gesture === selectionGesture && currentSelection.source === text && currentSelection.page === page && currentSelection.documentId === documentId) {
     if (rects.length) currentSelection.rects = rects;
     return currentSelection;
   }
   if (currentSelection && ['loading', 'waiting'].includes(currentSelection.status)) currentSelection.status = 'skipped';
-  const item = { id: ++selectionSerial, documentId, page, source: text, rects, result: '', model: '', status: 'selected' };
+  const item = { id: crypto.randomUUID(), gesture: selectionGesture, documentId, page, source: text, rects, result: '', model: '', status: 'selected', storageState: 'saving' };
   history.unshift(item);
-  if (history.length > 20) history.pop();
+  if (history.length > 100) history.pop();
   currentSelection = item;
   renderHistory();
+  void persistSelection(item);
   return item;
+}
+
+async function persistSelection(item) {
+  const serial = item.saveSerial = (item.saveSerial || 0) + 1;
+  const payload = { id: item.id, page: item.page, source: item.source, rects: item.rects || [], result: item.result, model: item.model };
+  item.storageState = 'saving';
+  try {
+    const saved = await window.jiao.saveSelection(item.documentId, payload);
+    if (serial !== item.saveSerial) return;
+    item.createdAt = saved.createdAt;
+    item.updatedAt = saved.updatedAt;
+    item.storageState = 'saved';
+  } catch (error) {
+    if (serial !== item.saveSerial) return;
+    item.storageState = 'failed';
+    if (item.documentId === documentId && history.includes(item)) showToast(`划选历史保存失败：${error.message}`);
+  }
+  if (item.documentId === documentId && history.includes(item)) renderHistory();
+}
+
+async function revealSelection(item) {
+  const openedId = documentId;
+  const serial = openSerial;
+  const request = ++revealSerial;
+  const revealed = await highlights.revealSelection(item);
+  if (!revealed && request === revealSerial && openedId === documentId && serial === openSerial) showToast('已跳转到原页，但无法定位这条记录的文字范围。');
+}
+
+function restoreSelection(item) {
+  if (item.documentId !== documentId) return;
+  dismissBubble();
+  card.close();
+  contextMenu.close();
+  annotations.close(false);
+  translationSerial++;
+  pendingTranslation = null;
+  skipUnfinishedHistory();
+  translating = false;
+  selectedText = item.source;
+  currentSelection = item;
+  translation = item.result;
+  setText(ui.sourceText, item.source);
+  showTranslation(item.result || '选文已恢复，可添加标注或重新翻译。', item.result ? 'success' : 'idle');
+  ui.selectionLength.textContent = `${item.source.length} / 3000 字`;
+  ui.copyButton.disabled = !item.result;
+  updateTranslationButton();
+  renderHistory();
+  void revealSelection(item);
 }
 
 async function runTranslation(text, item = currentSelection) {
@@ -337,7 +417,7 @@ async function runTranslation(text, item = currentSelection) {
     translation = result;
     showTranslation(result, 'success');
     ui.copyButton.disabled = false;
-    if (item?.documentId === documentId) { item.result = result; item.model = model; item.status = 'success'; }
+    if (item?.documentId === documentId) { item.result = result; item.model = model; item.status = 'success'; void persistSelection(item); }
     renderHistory();
   } catch (error) {
     if (serial === translationSerial) {
@@ -361,22 +441,26 @@ function renderHistory() {
   if (!history.length) {
     const hint = document.createElement('p');
     hint.className = 'hint';
-    hint.textContent = '划选正文后，右键记录可添加标签或笔记。';
+    hint.textContent = '划选记录按文献保存在本机。点击返回原选区，右键添加标签或笔记。';
     ui.historyList.append(hint);
   }
   for (const item of history) {
     const button = document.createElement('button');
-    button.className = 'history-item';
+    button.className = `history-item${currentSelection?.id === item.id ? ' active' : ''}`;
     button.type = 'button';
     button.dataset.selectionId = String(item.id);
     button.dataset.page = String(item.page);
-    button.title = `第 ${item.page} 页 · 右键添加标签或笔记${item.model ? ` · ${item.model}` : ''}`;
+    button.title = `第 ${item.page} 页 · 点击返回原选区 · 右键添加标签或笔记${item.model ? ` · ${item.model}` : ''}`;
     const source = document.createElement('strong');
     source.textContent = item.source;
     const result = document.createElement('span');
     result.textContent = item.result || `第 ${item.page} 页 · ${item.status === 'loading' ? '翻译中…' : item.status === 'waiting' ? '等待翻译…' : item.status === 'failed' ? '翻译失败，可重试或标注' : '右键添加标签或笔记'}`;
     button.append(source, result);
-    const note = annotations.getAnnotation(item.page, item.source);
+    const location = document.createElement('span');
+    location.className = 'history-location';
+    location.textContent = `第 ${item.page} 页 · 返回原选区 · ${item.storageState === 'saved' ? '已保存' : item.storageState === 'failed' ? '仅暂存，保存失败' : '保存中…'}`;
+    button.append(location);
+    const note = annotations.getAnnotation(item.page, item.source, item.rects);
     if (note) {
       const mark = document.createElement('span');
       mark.className = 'history-note-mark';
@@ -396,22 +480,7 @@ function renderHistory() {
       button.append(mark);
     }
     button.addEventListener('contextmenu', event => showSelectionMenu(event, item));
-    button.addEventListener('click', () => {
-      dismissBubble();
-      translationSerial++;
-      pendingTranslation = null;
-      skipUnfinishedHistory();
-      translating = false;
-      selectedText = item.source;
-      currentSelection = item;
-      translation = item.result;
-      setText(ui.sourceText, item.source);
-      showTranslation(item.result || '选文已恢复，可添加标注或重新翻译。', item.result ? 'success' : 'idle');
-      ui.selectionLength.textContent = `${item.source.length} / 3000 字`;
-      ui.copyButton.disabled = !item.result;
-      updateTranslationButton();
-      renderHistory();
-    });
+    button.addEventListener('click', () => restoreSelection(item));
     ui.historyList.append(button);
   }
 }
@@ -425,6 +494,7 @@ function skipUnfinishedHistory() {
 function showSelectionMenu(event, item = currentSelection) {
   if (!item || item.documentId !== documentId) return;
   dismissBubble();
+  card.close();
   contextMenu.open(event, [
     { label: '添加标签', action: () => annotations.editSelection(item, 'tags') },
     { label: '写评论 / 笔记', action: () => annotations.editSelection(item, 'comment') }
@@ -514,13 +584,13 @@ async function checkModel(action = 'status', name) {
 ui.openButton.addEventListener('click', choosePdf);
 ui.emptyOpenButton.addEventListener('click', choosePdf);
 ui.clearRecent.addEventListener('click', () => changeRecent('clearRecent'));
-ui.previousPage.addEventListener('click', () => { dismissBubble(); reader.goToPage(reader.currentPage - 1); });
-ui.nextPage.addEventListener('click', () => { dismissBubble(); reader.goToPage(reader.currentPage + 1); });
-function setReaderScale(scale) { dismissBubble(); reader.setScale(scale); }
+ui.previousPage.addEventListener('click', () => { dismissBubble(); card.close(); reader.goToPage(reader.currentPage - 1); });
+ui.nextPage.addEventListener('click', () => { dismissBubble(); card.close(); reader.goToPage(reader.currentPage + 1); });
+function setReaderScale(scale) { dismissBubble(); card.close(); reader.setScale(scale); }
 ui.zoomOut.addEventListener('click', () => setReaderScale(reader.scale - 0.1));
 ui.zoomIn.addEventListener('click', () => setReaderScale(reader.scale + 0.1));
-ui.fitButton.addEventListener('click', () => { dismissBubble(); reader.fitWidth(); });
-function commitPage() { dismissBubble(); reader.goToPage(ui.pageInput.value); ui.pageInput.value = String(reader.currentPage || 0); }
+ui.fitButton.addEventListener('click', () => { dismissBubble(); card.close(); reader.fitWidth(); });
+function commitPage() { dismissBubble(); card.close(); reader.goToPage(ui.pageInput.value); ui.pageInput.value = String(reader.currentPage || 0); }
 ui.pageInput.addEventListener('change', commitPage);
 ui.pageInput.addEventListener('keydown', event => { if (event.key === 'Enter') { commitPage(); ui.pageInput.blur(); } });
 ui.refreshStatus.addEventListener('click', () => checkModel());
@@ -542,6 +612,7 @@ document.addEventListener('pointerdown', event => {
   if (bubble.contains(event.target)) { clearTimeout(selectionTimer); return; }
   dismissBubble();
   selectingPdf = event.button === 0 && Boolean(event.target.closest?.('.textLayer'));
+  if (selectingPdf) { selectionGesture++; highlights.clearFocus(); }
 });
 document.addEventListener('pointerup', () => {
   if (!selectingPdf) return;
@@ -555,8 +626,8 @@ document.addEventListener('pointercancel', () => { selectingPdf = false; dismiss
 ui.readerScroll.addEventListener('scroll', () => bubble.hide(), { passive: true });
 window.addEventListener('blur', () => { selectingPdf = false; dismissBubble(); });
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') dismissBubble();
-  if (event.target.closest?.('dialog[open]')) return;
+  if (event.key === 'Escape') { dismissBubble(); card.close(); highlights.clearFocus(); }
+  if (event.target.closest?.('dialog[open], input, textarea, [contenteditable="true"]')) return;
   if (event.ctrlKey && event.key.toLowerCase() === 'o') { event.preventDefault(); dismissBubble(); choosePdf(); }
   if (event.ctrlKey && (event.key === '+' || event.key === '=')) { event.preventDefault(); setReaderScale(reader.scale + 0.1); }
   if (event.ctrlKey && event.key === '-') { event.preventDefault(); setReaderScale(reader.scale - 0.1); }

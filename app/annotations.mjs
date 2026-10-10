@@ -3,6 +3,14 @@ import { ANNOTATION_COLORS, applyColor, colorForTag, normalizeColor, noteColor }
 const TAG_LIMIT = 20;
 const TAG_LENGTH = 50;
 const COMMENT_LENGTH = 6000;
+const RECT_TOLERANCE = 1e-4;
+
+function sameRects(first, second) {
+  return Array.isArray(first) && Array.isArray(second) && first.length > 0 && first.length === second.length &&
+    first.every((rect, index) => ['x', 'y', 'width', 'height'].every(field =>
+      Number.isFinite(rect[field]) && Number.isFinite(second[index]?.[field]) &&
+      Math.abs(rect[field] - second[index][field]) <= RECT_TOLERANCE));
+}
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -228,8 +236,15 @@ export class AnnotationPanel {
     await this.loadPromise;
   }
 
-  getAnnotation(page, source) {
-    return this.notes.find(note => Number(note.page) === Number(page) && note.source === String(source).trim()) || null;
+  getAnnotation(page, source, rects) {
+    const candidates = this.notes.filter(note => Number(note.page) === Number(page) && note.source === String(source).trim());
+    if (Array.isArray(rects) && rects.length) {
+      const positioned = candidates.find(note => sameRects(note.rects, rects));
+      if (positioned) return positioned;
+      // A legacy note has no geometry; reuse it only when the quotation is unambiguous.
+      return candidates.length === 1 && !candidates[0].rects?.length ? candidates[0] : null;
+    }
+    return candidates.length === 1 ? candidates[0] : null;
   }
 
   toggle() {
@@ -344,7 +359,7 @@ export class AnnotationPanel {
       applyColor(item, noteColor(note));
       const heading = element('div', 'annotation-item-heading');
       const jump = action('annotation-jump', `第 ${note.page} 页`, `跳转到第 ${note.page} 页`);
-      jump.addEventListener('click', () => { this.close(false); this.onNavigate(Number(note.page)); });
+      jump.addEventListener('click', () => { this.close(false); this.onNavigate(note); });
       const time = element('time', 'annotation-time', noteTime(note));
       const rawTime = timestamp(note);
       if (rawTime) time.dateTime = new Date(rawTime).toISOString();
@@ -384,7 +399,7 @@ export class AnnotationPanel {
     page = Number(page);
     if (!source || !Number.isSafeInteger(page) || page < 1 || page > 1_000_000) { this.onToast('请先划选本篇文献中的文字。'); return; }
     if (source.length > 12000) { this.onToast('选文超过 12000 字，请缩小范围后添加笔记。'); return; }
-    const existing = (annotationId && this.notes.find(note => note.id === annotationId)) || this.getAnnotation(page, source);
+    const existing = annotationId ? this.notes.find(note => note.id === annotationId) : this.getAnnotation(page, source, rects);
     this.cancelEditor(false, true);
     this.editorReturnFocus = document.activeElement;
     this.close(false);

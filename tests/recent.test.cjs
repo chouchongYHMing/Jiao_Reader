@@ -181,12 +181,16 @@ test('new reading IPC methods reject untrusted frames before touching storage', 
     ['reader:set-recent-priority', [first, 'increment']],
     ['reader:annotations', [doc]],
     ['reader:save-annotation', [doc, note]],
-    ['reader:remove-annotation', [doc, 'bb3192d8-0e93-45b3-bd4b-2fbfa660e6c7']]
+    ['reader:remove-annotation', [doc, 'bb3192d8-0e93-45b3-bd4b-2fbfa660e6c7']],
+    ['reader:selection-history', [doc]],
+    ['reader:save-selection', [doc, { page: 1, source: 'Selected sentence' }]]
   ]) await assert.rejects(reader.invokeUntrusted(channel, ...args), /无效请求/);
   assert.equal((await reader.invoke('reader:set-recent-priority', first, 'increment'))[0].priority, 1);
   const saved = await reader.invoke('reader:save-annotation', doc, note);
   assert.equal((await reader.invoke('reader:annotations', doc))[0].id, saved.id);
   assert.equal((await reader.invoke('reader:remove-annotation', doc, saved.id)).length, 0);
+  const selection = await reader.invoke('reader:save-selection', doc, { page: 1, source: 'Selected sentence' });
+  assert.equal((await reader.invoke('reader:selection-history', doc))[0].id, selection.id);
 });
 
 test('preload exposes the expected reading storage IPC methods', async () => {
@@ -208,10 +212,14 @@ test('preload exposes the expected reading storage IPC methods', async () => {
   const note = { page: 1, source: 'Selected sentence', tags: ['method'], comment: '' };
   await exposed.saveAnnotation('document-id', note);
   await exposed.removeAnnotation('document-id', 'note-id');
+  await exposed.selectionHistory('document-id');
+  const selection = { id: 'selection-id', page: 2, source: 'Full selected text' };
+  await exposed.saveSelection('document-id', selection);
   assert.deepEqual(calls, [
     ['reader:remove-recent', 'paper.pdf'], ['reader:clear-recent'],
     ['reader:set-recent-priority', 'paper.pdf', 'reset'],
     ['reader:annotations', 'document-id'], ['reader:save-annotation', 'document-id', note],
-    ['reader:remove-annotation', 'document-id', 'note-id']
+    ['reader:remove-annotation', 'document-id', 'note-id'],
+    ['reader:selection-history', 'document-id'], ['reader:save-selection', 'document-id', selection]
   ]);
 });

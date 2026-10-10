@@ -3,3 +3,12 @@
 .history-item span.history-note-mark{display:flex;flex-wrap:wrap;gap:4px;white-space:normal}
 .history-note-mark .annotation-tag{font-size:10px;line-height:1.45}
 .history-note-mark .history-comment-mark{font-size:10px;color:#6e816b;align-self:center}
+.pdf-note-markers{position:absolute;inset:0;z-index:2;pointer-events:none;user-select:none}
+.pdf-note-marker{position:absolute;transform:translate(3px,-9px);display:grid;place-items:center;width:19px;height:19px;padding:2px;border:1px solid var(--annotation-border);border-radius:5px;background:var(--annotation-color);color:var(--annotation-ink);box-shadow:0 1px 4px #243c3020;pointer-events:auto;user-select:none;cursor:pointer}
+.pdf-note-marker svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.pdf-note-marker:hover{filter:brightness(.95);box-shadow:0 2px 8px #243c3030}
+.pdf-note-marker:focus-visible{outline:2px solid #366e91;outline-offset:2px}
+.pdf-history-layer{position:absolute;inset:0;z-index:0;pointer-events:none;user-select:none;overflow:clip}
+.pdf-history-highlight{position:absolute;display:block;pointer-events:none;user-select:none;border-radius:2px;background:#a7d3f144;outline:1.5px solid #4784ad;outline-offset:1px}
+.history-item.active{background:#e9f1ec;border-left:2px solid #578977}
+.history-item .history-location{color:#799084;font-size:10px;margin-top:4px}

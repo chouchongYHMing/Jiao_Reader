@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('jiao', {
   annotations: documentId => ipcRenderer.invoke('reader:annotations', documentId),
   saveAnnotation: (documentId, annotation) => ipcRenderer.invoke('reader:save-annotation', documentId, annotation),
   removeAnnotation: (documentId, annotationId) => ipcRenderer.invoke('reader:remove-annotation', documentId, annotationId),
+  selectionHistory: documentId => ipcRenderer.invoke('reader:selection-history', documentId),
+  saveSelection: (documentId, selection) => ipcRenderer.invoke('reader:save-selection', documentId, selection),
   status: () => ipcRenderer.invoke('reader:status'),
   selectModel: name => ipcRenderer.invoke('reader:select-model', name),
   startOllama: () => ipcRenderer.invoke('reader:start-ollama'),

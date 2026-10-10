@@ -69,6 +69,16 @@ function registerIpc() {
     return readingStore.removeAnnotation(documentId, annotationId);
   });
 
+  ipcMain.handle('reader:selection-history', async (event, documentId) => {
+    if (!trusted(event)) throw new Error('无效请求');
+    return readingStore.selectionHistory(documentId);
+  });
+
+  ipcMain.handle('reader:save-selection', async (event, documentId, selection) => {
+    if (!trusted(event)) throw new Error('无效请求');
+    return readingStore.saveSelection(documentId, selection);
+  });
+
   ipcMain.handle('reader:open', async event => {
     if (!trusted(event)) throw new Error('无效请求');
     const choice = await dialog.showOpenDialog(mainWindow, {
